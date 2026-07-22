@@ -53,18 +53,20 @@
   </main>
   <script>
     // Tempel URL Web App Google Apps Script hasil deployment di bawah ini.
-    const API_URL = 'PASTE_URL_WEB_APP_GOOGLE_APPS_SCRIPT_DI_SINI';
+    const API_URL = 'https://script.google.com/macros/s/AKfycby8dhKxMKqdAJ-ccTDOPvya310xBKLSeLlJfUYXRXVL_5seTfNLTBI-l5i9v6eI92eRtg/exec';
     let penghuni = [];
     const $ = (id) => document.getElementById(id);
     const formatTanggal = (value) => value ? new Intl.DateTimeFormat('id-ID', {day:'2-digit',month:'short',year:'numeric'}).format(new Date(value + 'T00:00:00')) : '-';
     const selisihHari = (tanggal) => Math.ceil((new Date(tanggal + 'T00:00:00') - new Date()) / 86400000);
     function setStatus(teks, error=false) { $('status').textContent = teks; $('status').className = error ? 'error' : ''; }
     async function request(data) {
-      if (API_URL.startsWith('PASTE_')) throw new Error('Masukkan URL Web App Google Apps Script di variabel API_URL.');
-      const url = data.action === 'list' ? `${API_URL}?action=list` : API_URL;
-      const options = data.action === 'list' ? {} : { method:'POST', body:JSON.stringify(data) };
-      const response = await fetch(url, options);
-      const result = await response.json();
+      if (API_URL.startsWith('PASTE_')) throw new Error('https://script.google.com/macros/s/AKfycby8dhKxMKqdAJ-ccTDOPvya310xBKLSeLlJfUYXRXVL_5seTfNLTBI-l5i9v6eI92eRtg/exec');
+      // Gunakan POST untuk semua request (termasuk list) untuk menghindari redirect issue GAS
+      const options = { method:'POST', body:JSON.stringify(data) };
+      const response = await fetch(API_URL, options);
+      const text = await response.text();
+      let result;
+      try { result = JSON.parse(text); } catch(e) { throw new Error('Response bukan JSON: ' + text.substring(0,200)); }
       if (!result.success) throw new Error(result.message || 'Terjadi kesalahan pada server.');
       return result;
     }
