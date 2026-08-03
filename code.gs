@@ -102,7 +102,7 @@ function getPenghuni_() {
     return [];
   }
 
-  const range = sheet.getRange(2, 1, lastRow - 1, 9);
+  const range = sheet.getRange(2, 1, lastRow - 1, HEADERS.length);
 
   // values: nilai asli; displayValues: tampilan tanggal dari Google Sheet
   const rows = range.getValues();
@@ -117,14 +117,16 @@ function getPenghuni_() {
       tanggalMasuk: formatTanggal_(row[4], tampilan[index][4]),
       durasi: Number(row[5]) || 0,
       tanggalSelesai: formatTanggal_(row[6], tampilan[index][6]),
-      status: String(row[7] || 'Aktif')
+      status: String(row[7] || 'Aktif'),
+      kontakNama: String(row[9] || ''),
+      kontakNoHp: String(row[10] || '')
     }))
     .filter(data => data.id)
     .reverse();
 }
 
 function tambahPenghuni_(data) {
-  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi'];
+  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp'];
 
   wajib.forEach(kolom => {
     if (!data[kolom]) {
@@ -162,7 +164,9 @@ function tambahPenghuni_(data) {
       durasi,
       tanggalSelesai,
       data.status === 'Selesai' ? 'Selesai' : 'Aktif',
-      new Date()
+      new Date(),
+      String(data.kontakNama).trim(),
+      String(data.kontakNoHp).trim()
     ]);
 
     return {
