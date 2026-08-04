@@ -10,16 +10,31 @@ function doGet(e) {
     const action = String((e && e.parameter && e.parameter.action) || 'list')
       .toLowerCase()
       .split('?')[0];
+
     const callback = (e && e.parameter && e.parameter.callback) || '';
 
     let hasil;
-    if (action === 'listKosan') {
-      hasil = { success: true, data: getKosan_() };
+
+    // Penting: listkosan menggunakan huruf kecil
+    if (action === 'listkosan') {
+      hasil = {
+        success: true,
+        data: getKosan_()
+      };
+    } else if (action === 'list') {
+      hasil = {
+        success: true,
+        data: getPenghuni_()
+      };
     } else {
-      hasil = { success: true, data: getPenghuni_() };
+      hasil = {
+        success: false,
+        message: 'Aksi tidak ditemukan.'
+      };
     }
 
     return jsonResponse_(hasil, callback);
+
   } catch (error) {
     return jsonResponse_({
       success: false,
