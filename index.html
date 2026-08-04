@@ -83,14 +83,22 @@
       renderKosan();
     }
 
-    async function loadData() {
-      setStatus($('status'),'Memuat data dari Google Sheet...');
-      const [hasilPenghuni, hasilKosan] = await Promise.all([ambilDataJSONP('list'), ambilDataJSONP('listKosan')]);
-      if (!hasilPenghuni.success) throw new Error(hasilPenghuni.message || 'Data gagal dibaca.');
-      penghuni = hasilPenghuni.data || [];
-      kosan = hasilKosan.data || [];
-      isiDropdownKosan(); render(); setStatus($('status'),'');
-    }
+    async function loadData(){
+
+    const hasilPenghuni = await ambilDataJSONP("list");
+    console.log("Penghuni",hasilPenghuni);
+
+    const hasilKosan = await ambilDataJSONP("listKosan");
+    console.log("Kosan",hasilKosan);
+
+    penghuni = hasilPenghuni.data || [];
+    kosan = hasilKosan.data || [];
+
+    console.table(kosan);
+
+    isiDropdownKosan();
+    render();
+}
 
     function edit(id) {
       const p = penghuni.find(x => x.id === id);

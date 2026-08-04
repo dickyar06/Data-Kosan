@@ -31,45 +31,43 @@ function doGet(e) {
 /* Menambah, mengubah, atau menghapus data dari website. */
 function doPost(e) {
   try {
-    const data = JSON.parse((e.postData && e.postData.contents) || '{}');
-    const action = String(data.action || '').toLowerCase();
+    const data = JSON.parse(e.postData.contents);
+    const action = String(data.action || "").toLowerCase();
 
-    if (action === 'add') {
-      return jsonResponse_(tambahPenghuni_(data));
+    switch(action){
+
+      case "add":
+        return jsonResponse_(tambahPenghuni_(data));
+
+      case "update":
+        return jsonResponse_(updatePenghuni_(data));
+
+      case "delete":
+        return jsonResponse_(hapusPenghuni_(data.id));
+
+      case "addkosan":
+        return jsonResponse_(tambahKosan_(data));
+
+      case "updatekosan":
+        return jsonResponse_(updateKosan_(data));
+
+      case "deletekosan":
+        return jsonResponse_(hapusKosan_(data.id));
+
+      default:
+        return jsonResponse_({
+          success:false,
+          message:"Aksi tidak ditemukan."
+        });
     }
 
-    if (action === 'update') {
-      return jsonResponse_(updatePenghuni_(data));
-    }
-
-    if (action === 'delete') {
-      return jsonResponse_(hapusPenghuni_(data.id));
-    }
-
-    if (action === 'addKosan') {
-      return jsonResponse_(tambahKosan_(data));
-    }
-
-    if (action === 'updateKosan') {
-      return jsonResponse_(updateKosan_(data));
-    }
-
-    if (action === 'deleteKosan') {
-      return jsonResponse_(hapusKosan_(data.id));
-    }
-
+  } catch(err){
     return jsonResponse_({
-      success: false,
-      message: 'Aksi tidak ditemukan.'
-    });
-  } catch (error) {
-    return jsonResponse_({
-      success: false,
-      message: error.message
+      success:false,
+      message:err.message
     });
   }
 }
-
 function getSheet_() {
   if (!SPREADSHEET_ID) {
     throw new Error('SPREADSHEET_ID belum diisi.');
