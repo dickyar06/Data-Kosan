@@ -31,6 +31,10 @@ function doPost(e) {
       return jsonResponse_(tambahPenghuni_(data));
     }
 
+    if (action === 'update') {
+      return jsonResponse_(updatePenghuni_(data));
+    }
+
     if (action === 'delete') {
       return jsonResponse_(hapusPenghuni_(data.id));
     }
@@ -203,6 +207,64 @@ function hapusPenghuni_(id) {
     success: true,
     message: 'Data berhasil dihapus.'
   };
+}
+
+function updatePenghuni_(data) {
+  if (!data.id) {
+    throw new Error('ID data tidak ditemukan.');
+  }
+
+  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp'];
+  wajib.forEach(kolom => {
+    if (!data[kolom]) {
+      throw new Error(`Kolom ${kolom} wajib diisi.`);
+    }
+  });
+
+  const tanggalMasuk = new Date(`${data.tanggalMasuk}T00:00:00`);
+  if (isNaN(tanggalMasuk.getTime())) {
+    throw new Error('Tanggal masuk tidak valid.');
+  }
+
+  const durasi = Number(data.durasi);
+  if (!Number.isInteger(durasi) || durasi < 1) {
+    throw new Error('Durasi sewa minimal 1 bulan.');
+  }
+
+  const tanggalSelesai = new Date(tanggalMasuk);
+  tanggalSelesai.setMonth(tanggalSelesai.getMonth() + durasi);
+
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('Data penghuni kosong.');
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const baris = ids.findIndex(item => String(item) === String(data.id));
+  if (baris === -1) throw new Error('Data penghuni tidak ditemukan.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    // Update baris (baris sheet = baris+2 karena header di baris 1)
+    const rowIndex = baris + 2;
+    sheet.getRange(rowIndex, 2).setValue(String(data.nama).trim());
+    sheet.getRange(rowIndex, 3).setValue(String(data.noHp).trim());
+    sheet.getRange(rowIndex, 4).setValue(String(data.kamar).trim());
+    sheet.getRange(rowIndex, 5).setValue(tanggalMasuk);
+    sheet.getRange(rowIndex, 6).setValue(durasi);
+    sheet.getRange(rowIndex, 7).setValue(tanggalSelesai);
+    sheet.getRange(rowIndex, 8).setValue(data.status === 'Selesai' ? 'Selesai' : 'Aktif');
+    sheet.getRange(rowIndex, 10).setValue(String(data.kontakNama).trim());
+    sheet.getRange(rowIndex, 11).setValue(String(data.kontakNoHp).trim());
+
+    return {
+      success: true,
+      message: 'Data berhasil diperbarui.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function formatTanggal_(nilai, tampilanTanggal) {

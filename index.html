@@ -4,20 +4,21 @@
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DIVA THREE-DI KOST</title>
   <style>
-    :root{--utama:#2563eb;--gelap:#172554;--latar:#f1f5f9;--merah:#dc2626}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--latar);color:#0f172a}header{background:linear-gradient(120deg,var(--gelap),var(--utama));color:#fff;padding:28px max(24px,calc((100vw - 1160px)/2))}h1{margin:0 0 7px;font-size:28px}header p{margin:0;opacity:.85}main{max-width:1160px;margin:26px auto;padding:0 20px 40px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}.card,.panel{background:#fff;border-radius:14px;box-shadow:0 3px 14px #0f172a12}.card{padding:18px;border-left:5px solid var(--utama)}.card small{color:#64748b}.card strong{display:block;font-size:28px;margin-top:7px}.panel{padding:22px;margin-bottom:22px}h2{font-size:20px;margin:0 0 18px}.form{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}label{display:grid;gap:6px;font-size:13px;font-weight:bold;color:#475569}input,select{padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff}input:focus,select:focus{outline:2px solid #93c5fd;border-color:var(--utama)}.actions{display:flex;align-items:end;gap:10px}button{border:0;border-radius:8px;padding:11px 16px;background:var(--utama);color:#fff;font-weight:bold;cursor:pointer;font-size:14px}.secondary{background:#e2e8f0;color:#334155}.table-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}#search{max-width:290px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:13px 10px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}td small{display:block;color:#64748b;font-size:12px;margin-top:2px}th{color:#475569;font-size:12px;text-transform:uppercase}.badge{padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}.aktif{background:#dcfce7;color:#166534}.selesai{background:#fee2e2;color:#991b1b}.delete{background:#fee2e2;color:var(--merah);padding:7px 10px}.empty{text-align:center;color:#64748b;padding:22px}#status{min-height:20px;color:#475569;font-size:13px;margin-top:12px}.error{color:var(--merah)!important}@media(max-width:780px){.cards,.form{grid-template-columns:repeat(2,1fr)}.actions{grid-column:span 2}}@media(max-width:480px){.cards,.form{grid-template-columns:1fr}.actions{grid-column:auto}h1{font-size:23px}}
+    :root{--utama:#2563eb;--gelap:#172554;--latar:#f1f5f9;--merah:#dc2626}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--latar);color:#0f172a}header{background:linear-gradient(120deg,var(--gelap),var(--utama));color:#fff;padding:28px max(24px,calc((100vw - 1160px)/2))}h1{margin:0 0 7px;font-size:28px}header p{margin:0;opacity:.85}main{max-width:1160px;margin:26px auto;padding:0 20px 40px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}.card,.panel{background:#fff;border-radius:14px;box-shadow:0 3px 14px #0f172a12}.card{padding:18px;border-left:5px solid var(--utama)}.card small{color:#64748b}.card strong{display:block;font-size:28px;margin-top:7px}.panel{padding:22px;margin-bottom:22px}h2{font-size:20px;margin:0 0 18px}.form{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}label{display:grid;gap:6px;font-size:13px;font-weight:bold;color:#475569}input,select{padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff}input:focus,select:focus{outline:2px solid #93c5fd;border-color:var(--utama)}.actions{display:flex;align-items:end;gap:10px}button{border:0;border-radius:8px;padding:11px 16px;background:var(--utama);color:#fff;font-weight:bold;cursor:pointer;font-size:14px}.secondary{background:#e2e8f0;color:#334155}.table-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}#search{max-width:290px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:13px 10px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}td small{display:block;color:#64748b;font-size:12px;margin-top:2px}th{color:#475569;font-size:12px;text-transform:uppercase}.badge{padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}.aktif{background:#dcfce7;color:#166534}.selesai{background:#fee2e2;color:#991b1b}.delete{background:#fee2e2;color:var(--merah);padding:7px 10px}.update{background:#dbeafe;color:var(--utama);padding:7px 10px;margin-right:6px}.empty{text-align:center;color:#64748b;padding:22px}#status{min-height:20px;color:#475569;font-size:13px;margin-top:12px}.error{color:var(--merah)!important}@media(max-width:780px){.cards,.form{grid-template-columns:repeat(2,1fr)}.actions{grid-column:span 2}}@media(max-width:480px){.cards,.form{grid-template-columns:1fr}.actions{grid-column:auto}h1{font-size:23px}}
   </style>
 </head>
 <body>
   <header><h1>🏠 DIVA THREE-DI KOST</h1><p>Dashboard</p></header>
   <main>
     <section class="cards"><div class="card"><small>Total penghuni</small><strong id="total">0</strong></div><div class="card"><small>Penghuni aktif</small><strong id="aktif">0</strong></div><div class="card"><small>Kamar terisi</small><strong id="kamar">0</strong></div><div class="card"><small>Jatuh tempo ≤ 7 hari</small><strong id="tempo">0</strong></div></section>
-    <section class="panel"><h2>Input Mahasiswa Masuk</h2><form id="formPenghuni" class="form"><label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label><label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label><label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label><label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label><label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label><label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label><label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label><label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label><div class="actions"><button type="submit">Simpan Data</button><button type="reset" class="secondary">Bersihkan</button></div></form><div id="status"></div></section>
+    <section class="panel"><h2 id="judulForm">Input Mahasiswa Masuk</h2><form id="formPenghuni" class="form"><label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label><label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label><label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label><label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label><label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label><label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label><label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label><label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label><div class="actions"><button type="submit" id="btnSimpan">Simpan Data</button><button type="reset" class="secondary" id="btnReset">Bersihkan</button></div></form><div id="status"></div></section>
     <section class="panel"><div class="table-top"><h2>Data Penghuni</h2><input id="search" placeholder="Cari nama atau kamar..."></div><div class="table-wrap"><table><thead><tr><th>Nama</th><th>No. HP</th><th>Kontak Darurat</th><th>Kamar</th><th>Tgl Masuk</th><th>Durasi</th><th>Jatuh Tempo</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="dataPenghuni"></tbody></table></div></section>
   </main>
   <script>
     // URL Web App Apps Script. Jangan tambahkan ?action=list di sini.
     const API_URL = 'https://script.google.com/macros/s/AKfycby8dhKxMKqdAJ-ccTDOPvya310xBKLSeLlJfUYXRXVL_5seTfNLTBI-l5i9v6eI92eRtg/exec';
     let penghuni = [];
+    let editId = null;
     const $ = id => document.getElementById(id);
     const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value + 'T00:00:00')) : '-';
     const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
@@ -47,7 +48,7 @@
     function render() {
       const kata=$('search').value.toLowerCase();
       const list=penghuni.filter(p => `${p.nama} ${p.kamar}`.toLowerCase().includes(kata));
-      $('dataPenghuni').innerHTML=list.length ? list.map(p => `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td>${formatTanggal(p.tanggalSelesai)}</td><td><span class="badge ${p.status==='Aktif'?'aktif':'selesai'}">${p.status}</span></td><td><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty">Belum ada data penghuni.</td></tr>';
+      $('dataPenghuni').innerHTML=list.length ? list.map(p => `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td>${formatTanggal(p.tanggalSelesai)}</td><td><span class="badge ${p.status==='Aktif'?'aktif':'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty">Belum ada data penghuni.</td></tr>';
       const aktif=penghuni.filter(p=>p.status==='Aktif');
       $('total').textContent=penghuni.length; $('aktif').textContent=aktif.length; $('kamar').textContent=new Set(aktif.map(p=>p.kamar)).size;
       $('tempo').textContent=aktif.filter(p=>p.tanggalSelesai && selisihHari(p.tanggalSelesai)>=0 && selisihHari(p.tanggalSelesai)<=7).length;
@@ -60,11 +61,46 @@
       penghuni=hasil.data || []; render(); setStatus('');
     }
 
+    function edit(id) {
+      const p = penghuni.find(x => x.id === id);
+      if (!p) return;
+      editId = id;
+      const f = $('formPenghuni');
+      f.nama.value = p.nama; f.noHp.value = p.noHp; f.kamar.value = p.kamar;
+      f.tanggalMasuk.value = p.tanggalMasuk; f.durasi.value = p.durasi; f.status.value = p.status;
+      f.kontakNama.value = p.kontakNama; f.kontakNoHp.value = p.kontakNoHp;
+      $('judulForm').textContent = 'Update Data Penghuni';
+      $('btnSimpan').textContent = 'Simpan Perubahan';
+      $('btnReset').textContent = 'Batal';
+      setStatus('Sedang mengedit data. Ubah lalu klik Simpan Perubahan.');
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function batalEdit() {
+      editId = null;
+      const f = $('formPenghuni');
+      f.reset(); f.durasi.value = 12;
+      $('judulForm').textContent = 'Input Mahasiswa Masuk';
+      $('btnSimpan').textContent = 'Simpan Data';
+      $('btnReset').textContent = 'Bersihkan';
+      $('btnSimpan').type = 'submit';
+      setStatus('');
+    }
+
     $('formPenghuni').addEventListener('submit',async e => {
-      e.preventDefault(); const data=Object.fromEntries(new FormData(e.target)); data.action='add';
-      try { setStatus('Menyimpan ke Google Sheet...'); await kirimData(data); await loadData(); e.target.reset(); e.target.durasi.value=12; setStatus('Data berhasil tersimpan dan tampil di dashboard.'); }
+      e.preventDefault(); const data=Object.fromEntries(new FormData(e.target));
+      const mode = editId ? 'update' : 'add';
+      if (editId) data.id = editId;
+      data.action = mode;
+      try {
+        setStatus(mode==='update' ? 'Menyimpan perubahan ke Google Sheet...' : 'Menyimpan ke Google Sheet...');
+        await kirimData(data); await loadData();
+        if (mode==='update') { batalEdit(); setStatus('Data berhasil diperbarui.'); }
+        else { e.target.reset(); e.target.durasi.value=12; setStatus('Data berhasil tersimpan dan tampil di dashboard.'); }
+      }
       catch(error) { setStatus('Gagal: '+error.message,true); }
     });
+    $('btnReset').addEventListener('click',batalEdit);
     $('search').addEventListener('input',render);
     async function hapus(id) { if(!confirm('Hapus data penghuni ini?')) return; try { await kirimData({action:'delete',id}); await loadData(); setStatus('Data berhasil dihapus.'); } catch(error) { setStatus('Gagal: '+error.message,true); } }
     render(); loadData().catch(error => setStatus('Gagal memuat dashboard: '+error.message,true));
