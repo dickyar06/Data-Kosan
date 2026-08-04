@@ -1,21 +1,26 @@
-# TODO - Fitur Kontak Darurat & Tombol Update
+# TODO - Fitur Multi Kosan, Kontak Darurat & Update
 
-## Kontak Darurat
-1. ✅ `code.gs`: Tambah konstanta `HEADERS` (termasuk Kontak Darurat & No. HP Kontak Darurat)
-2. ✅ `code.gs`: Migrasi otomatis kolom baru pada sheet yang sudah ada
-3. ✅ `code.gs`: Baca & simpan data kontak darurat di `getPenghuni_()` / `tambahPenghuni_()`
-4. ✅ `index.html`: Tambah field form "Nama kontak darurat" & "No. HP kontak darurat"
-5. ✅ `index.html`: Tambah kolom tabel "Kontak Darurat"
+## Fitur Pengelolaan Kosan
+1. ✅ `code.gs`: Sheet baru "Kosan" + aksi CRUD (listKosan, addKosan, updateKosan, deleteKosan)
+2. ✅ `index.html`: Form tambah/update kosan (nama + jumlah kamar)
+3. ✅ `index.html`: Tabel data kosan + tombol Update/Hapus
+4. ✅ `index.html`: Ringkasan kamar terisi & sisa per kosan
 
-## Tombol Update
-6. ✅ `code.gs`: Tambah aksi `update` di `doPost` + fungsi `updatePenghuni_()`
-7. ✅ `index.html`: Tambah tombol "Update" di kolom Aksi
-8. ✅ `index.html`: Mode edit (isi form otomatis, tombol "Simpan Perubahan", tombol "Batal")
+## Penghuni Terkait Kosan
+5. ✅ `code.gs`: Kolom "Nama Kosan" pada penghuni (baca, simpan, update)
+6. ✅ `index.html`: Dropdown "Nama Kosan" di form penghuni
+7. ✅ `index.html`: Kolom "Kosan" di tabel penghuni
+
+## Fitur Sebelumnya
+8. ✅ `index.html`: Tombol Update/Hapus pada data penghuni + mode edit
+9. ✅ `index.html`: Field & kolom kontak darurat (wajib diisi)
 
 ## Deployment
-9. ⬜ (Manual) Redeploy Google Apps Script agar backend aktif
+10. ⬜ (Manual) Redeploy Google Apps Script agar backend aktif
 
 ## Catatan
 - Kontak darurat **WAJIB diisi** (validasi frontend & backend)
+- Nama kosan & jumlah kamar **WAJIB diisi**
+- Penghuni wajib memilih kosan dari dropdown
 - Kolom baru ditempatkan di akhir sheet agar data lama tidak bergeser
-- `code.gs` sudah disesuaikan dengan versi yang memakai `SPREADSHEET_ID`, lock, dan JSONP
+- `code.gs` memakai `SPREADSHEET_ID`, `LockService`, dan dukungan JSONP

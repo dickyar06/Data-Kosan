@@ -1,18 +1,25 @@
 const SHEET_NAME = 'Penghuni';
+const SHEET_KOSAN = 'Kosan';
 const SPREADSHEET_ID = '1_t-CmVldLgbTg5bpC_8RA5JXjAjd1rio5MWh5swTYkc';
-const HEADERS = ['ID', 'Nama', 'No. HP', 'Kamar', 'Tanggal Masuk', 'Durasi (Bulan)', 'Tanggal Selesai', 'Status', 'Dibuat Pada', 'Kontak Darurat', 'No. HP Kontak Darurat'];
+const HEADERS = ['ID', 'Nama', 'No. HP', 'Kamar', 'Tanggal Masuk', 'Durasi (Bulan)', 'Tanggal Selesai', 'Status', 'Dibuat Pada', 'Kontak Darurat', 'No. HP Kontak Darurat', 'Nama Kosan'];
+const HEADERS_KOSAN = ['ID', 'Nama Kosan', 'Jumlah Kamar', 'Dibuat Pada'];
 
-/* Membaca data. URL /exec maupun /exec?action=list akan mengembalikan data. */
+/* Membaca data. URL /exec maupun /exec?action=... akan mengembalikan data. */
 function doGet(e) {
   try {
-    const hasil = {
-      success: true,
-      data: getPenghuni_()
-    };
-
+    const action = String((e && e.parameter && e.parameter.action) || 'list')
+      .toLowerCase()
+      .split('?')[0];
     const callback = (e && e.parameter && e.parameter.callback) || '';
-    return jsonResponse_(hasil, callback);
 
+    let hasil;
+    if (action === 'listKosan') {
+      hasil = { success: true, data: getKosan_() };
+    } else {
+      hasil = { success: true, data: getPenghuni_() };
+    }
+
+    return jsonResponse_(hasil, callback);
   } catch (error) {
     return jsonResponse_({
       success: false,
@@ -21,7 +28,7 @@ function doGet(e) {
   }
 }
 
-/* Menambah atau menghapus data dari website. */
+/* Menambah, mengubah, atau menghapus data dari website. */
 function doPost(e) {
   try {
     const data = JSON.parse((e.postData && e.postData.contents) || '{}');
@@ -39,6 +46,18 @@ function doPost(e) {
       return jsonResponse_(hapusPenghuni_(data.id));
     }
 
+    if (action === 'addKosan') {
+      return jsonResponse_(tambahKosan_(data));
+    }
+
+    if (action === 'updateKosan') {
+      return jsonResponse_(updateKosan_(data));
+    }
+
+    if (action === 'deleteKosan') {
+      return jsonResponse_(hapusKosan_(data.id));
+    }
+
     return jsonResponse_({
       success: false,
       message: 'Aksi tidak ditemukan.'
@@ -49,14 +68,6 @@ function doPost(e) {
       message: error.message
     });
   }
-}
-
-function normalisasiAction_(e) {
-  const action = String((e && e.parameter && e.parameter.action) || 'list')
-    .toLowerCase()
-    .split('?')[0];
-
-  return action || 'list';
 }
 
 function getSheet_() {
@@ -98,6 +109,142 @@ function getSheet_() {
   return sheet;
 }
 
+function getKosanSheet_() {
+  if (!SPREADSHEET_ID) {
+    throw new Error('SPREADSHEET_ID belum diisi.');
+  }
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEET_KOSAN);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEET_KOSAN);
+
+    sheet.appendRow(HEADERS_KOSAN);
+
+    sheet.getRange(1, 1, 1, HEADERS_KOSAN.length)
+      .setFontWeight('bold')
+      .setBackground('#059669')
+      .setFontColor('#ffffff');
+
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, HEADERS_KOSAN.length);
+  }
+
+  return sheet;
+}
+
+function getKosan_() {
+  const sheet = getKosanSheet_();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return [];
+  }
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, HEADERS_KOSAN.length).getValues();
+
+  return rows
+    .map(row => ({
+      id: String(row[0] || ''),
+      namaKosan: String(row[1] || ''),
+      jumlahKamar: Number(row[2]) || 0
+    }))
+    .filter(data => data.id)
+    .reverse();
+}
+
+function tambahKosan_(data) {
+  if (!data.namaKosan || !data.jumlahKamar) {
+    throw new Error('Nama kosan dan jumlah kamar wajib diisi.');
+  }
+
+  const jumlahKamar = Number(data.jumlahKamar);
+  if (!Number.isInteger(jumlahKamar) || jumlahKamar < 1) {
+    throw new Error('Jumlah kamar minimal 1.');
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const sheet = getKosanSheet_();
+    sheet.appendRow([
+      Utilities.getUuid(),
+      String(data.namaKosan).trim(),
+      jumlahKamar,
+      new Date()
+    ]);
+
+    return {
+      success: true,
+      message: 'Kosan berhasil ditambahkan.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function updateKosan_(data) {
+  if (!data.id) {
+    throw new Error('ID kosan tidak ditemukan.');
+  }
+
+  if (!data.namaKosan || !data.jumlahKamar) {
+    throw new Error('Nama kosan dan jumlah kamar wajib diisi.');
+  }
+
+  const jumlahKamar = Number(data.jumlahKamar);
+  if (!Number.isInteger(jumlahKamar) || jumlahKamar < 1) {
+    throw new Error('Jumlah kamar minimal 1.');
+  }
+
+  const sheet = getKosanSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('Data kosan kosong.');
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const baris = ids.findIndex(item => String(item) === String(data.id));
+  if (baris === -1) throw new Error('Kosan tidak ditemukan.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const rowIndex = baris + 2;
+    sheet.getRange(rowIndex, 2).setValue(String(data.namaKosan).trim());
+    sheet.getRange(rowIndex, 3).setValue(jumlahKamar);
+
+    return {
+      success: true,
+      message: 'Kosan berhasil diperbarui.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function hapusKosan_(id) {
+  if (!id) {
+    throw new Error('ID kosan tidak ditemukan.');
+  }
+
+  const sheet = getKosanSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('Data kosan kosong.');
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const index = ids.findIndex(item => String(item) === String(id));
+  if (index === -1) throw new Error('Kosan tidak ditemukan.');
+
+  sheet.deleteRow(index + 2);
+
+  return {
+    success: true,
+    message: 'Kosan berhasil dihapus.'
+  };
+}
+
 function getPenghuni_() {
   const sheet = getSheet_();
   const lastRow = sheet.getLastRow();
@@ -123,14 +270,15 @@ function getPenghuni_() {
       tanggalSelesai: formatTanggal_(row[6], tampilan[index][6]),
       status: String(row[7] || 'Aktif'),
       kontakNama: String(row[9] || ''),
-      kontakNoHp: String(row[10] || '')
+      kontakNoHp: String(row[10] || ''),
+      namaKosan: String(row[11] || '')
     }))
     .filter(data => data.id)
     .reverse();
 }
 
 function tambahPenghuni_(data) {
-  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp'];
+  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp', 'namaKosan'];
 
   wajib.forEach(kolom => {
     if (!data[kolom]) {
@@ -170,7 +318,8 @@ function tambahPenghuni_(data) {
       data.status === 'Selesai' ? 'Selesai' : 'Aktif',
       new Date(),
       String(data.kontakNama).trim(),
-      String(data.kontakNoHp).trim()
+      String(data.kontakNoHp).trim(),
+      String(data.namaKosan).trim()
     ]);
 
     return {
@@ -182,39 +331,12 @@ function tambahPenghuni_(data) {
   }
 }
 
-function hapusPenghuni_(id) {
-  if (!id) {
-    throw new Error('ID data tidak ditemukan.');
-  }
-
-  const sheet = getSheet_();
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) {
-    throw new Error('Data penghuni kosong.');
-  }
-
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const index = ids.findIndex(item => String(item) === String(id));
-
-  if (index === -1) {
-    throw new Error('Data penghuni tidak ditemukan.');
-  }
-
-  sheet.deleteRow(index + 2);
-
-  return {
-    success: true,
-    message: 'Data berhasil dihapus.'
-  };
-}
-
 function updatePenghuni_(data) {
   if (!data.id) {
     throw new Error('ID data tidak ditemukan.');
   }
 
-  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp'];
+  const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp', 'namaKosan'];
   wajib.forEach(kolom => {
     if (!data[kolom]) {
       throw new Error(`Kolom ${kolom} wajib diisi.`);
@@ -257,6 +379,7 @@ function updatePenghuni_(data) {
     sheet.getRange(rowIndex, 8).setValue(data.status === 'Selesai' ? 'Selesai' : 'Aktif');
     sheet.getRange(rowIndex, 10).setValue(String(data.kontakNama).trim());
     sheet.getRange(rowIndex, 11).setValue(String(data.kontakNoHp).trim());
+    sheet.getRange(rowIndex, 12).setValue(String(data.namaKosan).trim());
 
     return {
       success: true,
@@ -265,6 +388,33 @@ function updatePenghuni_(data) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function hapusPenghuni_(id) {
+  if (!id) {
+    throw new Error('ID data tidak ditemukan.');
+  }
+
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    throw new Error('Data penghuni kosong.');
+  }
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const index = ids.findIndex(item => String(item) === String(id));
+
+  if (index === -1) {
+    throw new Error('Data penghuni tidak ditemukan.');
+  }
+
+  sheet.deleteRow(index + 2);
+
+  return {
+    success: true,
+    message: 'Data berhasil dihapus.'
+  };
 }
 
 function formatTanggal_(nilai, tampilanTanggal) {
