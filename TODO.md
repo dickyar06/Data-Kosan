@@ -16,7 +16,7 @@
 9. ✅ `index.html`: Field & kolom kontak darurat (wajib diisi)
 
 ## Deployment
-10. ⬜ (Manual) Redeploy Google Apps Script agar backend aktif
+10. ✅ (Manual) Redeploy Google Apps Script agar backend aktif — sudah dilakukan & berhasil
 
 ## Catatan
 - Kontak darurat **WAJIB diisi** (validasi frontend & backend)
