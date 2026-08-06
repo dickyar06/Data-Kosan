@@ -290,6 +290,35 @@ function getPenghuni_() {
     .reverse();
 }
 
+/*
+ * Cek apakah kamar (nama kosan + nomor kamar) sudah terisi oleh penghuni aktif.
+ * excludeId digunakan saat update agar data yang sama tidak dianggap bentrok.
+ */
+function cekKamarTerisi_(namaKosan, kamar, excludeId) {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
+  const namaKosanTujuan = String(namaKosan || '').trim().toLowerCase();
+  const kamarTujuan = String(kamar || '').trim().toLowerCase();
+
+  return values.some(row => {
+    const id = String(row[0] || '');
+    const kosan = String(row[11] || '').trim().toLowerCase();
+    const noKamar = String(row[3] || '').trim().toLowerCase();
+    const status = String(row[7] || 'Aktif');
+
+    // Abaikan jika ini data yang sedang di-update (id sama)
+    if (excludeId && id === String(excludeId)) return false;
+
+    // Hanya menghitung penghuni Aktif
+    if (status !== 'Aktif') return false;
+
+    return kosan === namaKosanTujuan && noKamar === kamarTujuan;
+  });
+}
+
 function tambahPenghuni_(data) {
   const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp', 'namaKosan'];
 
@@ -318,6 +347,11 @@ function tambahPenghuni_(data) {
   lock.waitLock(10000);
 
   try {
+    // Pastikan 1 kamar hanya untuk 1 penghuni aktif
+    if (cekKamarTerisi_(data.namaKosan, data.kamar)) {
+      throw new Error('Kamar ' + data.kamar + ' di ' + data.namaKosan + ' sudah terisi oleh penghuni aktif.');
+    }
+
     const sheet = getSheet_();
 
     sheet.appendRow([
@@ -381,6 +415,11 @@ function updatePenghuni_(data) {
   lock.waitLock(10000);
 
   try {
+    // Pastikan 1 kamar hanya untuk 1 penghuni aktif (abaikan data yang sedang di-update)
+    if (cekKamarTerisi_(data.namaKosan, data.kamar, data.id)) {
+      throw new Error('Kamar ' + data.kamar + ' di ' + data.namaKosan + ' sudah terisi oleh penghuni aktif.');
+    }
+
     // Update baris (baris sheet = baris+2 karena header di baris 1)
     const rowIndex = baris + 2;
     sheet.getRange(rowIndex, 2).setValue(String(data.nama).trim());

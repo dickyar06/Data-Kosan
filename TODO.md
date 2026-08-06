@@ -7,6 +7,12 @@
 4. ✅ `index.html`: Tambah field form "Nama kontak darurat" & "No. HP kontak darurat"
 5. ✅ `index.html`: Tambah kolom tabel "Kontak Darurat"
 
+## Validasi 1 Kamar = 1 Penghuni Aktif
+- ✅ `code.gs`: Fungsi `cekKamarTerisi_` untuk cek bentrok kamar
+- ✅ `code.gs`: Dipakai di `tambahPenghuni_` (tanpa `excludeId`)
+- ✅ `code.gs`: Dipakai di `updatePenghuni_` (dengan `excludeId` agar data yang diedit tidak dianggap bentrok)
+- ✅ `code.gs`: Perbaikan indentasi agar file bersih
+
 ## Grafik Dashboard
 6. ✅ Tambah Chart.js (CDN): bar chart, doughnut chart, line chart
 
