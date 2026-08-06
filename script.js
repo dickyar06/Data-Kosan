@@ -1,0 +1,353 @@
+// URL Web App Apps Script. Jangan tambahkan action di sini.
+const API_URL = 'https://script.google.com/macros/s/AKfycby8dhKxMKqdAJ-ccTDOPvya310xBKLSeLlJfUYXRXVL_5seTfNLTBI-l5i9v6eI92eRtg/exec';
+
+// Kredensial login (tanpa backend). Ubah sesuai keinginan.
+const LOGIN_USER = 'admin';
+const LOGIN_PASS = 'admin123';
+const SESSION_KEY = 'diva_kosan_login';
+
+let penghuni = [];
+let kosan = [];
+let editId = null;
+let editKosanId = null;
+let chartKosan = null, chartStatus = null, chartBulan = null;
+
+const $ = id => document.getElementById(id);
+
+const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value + 'T00:00:00')) : '-';
+
+const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
+
+// Hitung tanggal jatuh tempo berdasarkan durasi sewa:
+// durasi >= 3 bulan -> 1 bulan sebelum tanggal selesai; durasi <= 2 bulan -> 7 hari sebelum.
+const hitungJatuhTempo = (tanggalSelesai, durasi) => {
+  if (!tanggalSelesai) return '';
+  const t = new Date(tanggalSelesai + 'T00:00:00');
+  if (durasi >= 3) t.setMonth(t.getMonth() - 1);
+  else t.setDate(t.getDate() - 7);
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, '0');
+  const d = String(t.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const setStatus = (el, teks, error = false) => { el.textContent = teks; el.className = error ? 'error' : ''; };
+
+const escapeHtml = teks => { const el = document.createElement('div'); el.textContent = teks || ''; return el.innerHTML; };
+
+/* ===== Helper Modal ===== */
+function bukaModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('terbuka');
+}
+
+function tutupModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('terbuka');
+}
+
+// Membaca data memakai JSONP agar berfungsi dari Live Server (127.0.0.1) tanpa masalah CORS.
+function ambilDataJSONP(aksi) {
+  return new Promise((resolve, reject) => {
+    const callback = 'kosanCallback' + Date.now();
+    const script = document.createElement('script');
+    const bersihkan = () => { delete window[callback]; script.remove(); };
+    window[callback] = hasil => { bersihkan(); resolve(hasil); };
+    script.onerror = () => { bersihkan(); reject(new Error('Tidak dapat membaca data dari Google Sheet. Pastikan Code.gs versi JSONP sudah di-deploy.')); };
+    script.src = API_URL + '?action=' + aksi + '&callback=' + callback;
+    document.body.appendChild(script);
+  });
+}
+
+async function kirimData(data) {
+  const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
+  const hasil = await response.json();
+  if (!hasil.success) throw new Error(hasil.message || 'Terjadi kesalahan pada server.');
+  return hasil;
+}
+
+function isiDropdownKosan() {
+  const sel = $('formPenghuni').namaKosan;
+  sel.innerHTML = '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('');
+}
+
+function renderKosan() {
+  $('dataKosan').innerHTML = kosan.length ? kosan.map(k => `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td><button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
+
+  // Ringkasan: jumlah kamar, terisi, dan sisa per kosan
+  $('ringkasanKosan').innerHTML = kosan.length ? kosan.map(k => {
+    const terisi = penghuni.filter(p => p.namaKosan === k.namaKosan && p.status === 'Aktif').length;
+    const sisa = Math.max(0, k.jumlahKamar - terisi);
+    return `<div class="item"><h3>${escapeHtml(k.namaKosan)}</h3><p>Kamar terisi <strong>${terisi}</strong> / ${k.jumlahKamar}</p><p>Sisa kamar: <strong>${sisa}</strong></p></div>`;
+  }).join('') : '<div class="item"><h3>Belum ada kosan</h3><p>Tambahkan kosan untuk melihat ringkasan.</p></div>';
+
+  $('totalKosan').textContent = kosan.length;
+}
+
+function renderCharts() {
+  // Bar chart: penghuni per kosan
+  const labelKosan = kosan.map(k => k.namaKosan);
+  const dataKosan = kosan.map(k => penghuni.filter(p => p.namaKosan === k.namaKosan).length);
+  if (chartKosan) chartKosan.destroy();
+  chartKosan = new Chart($('chartKosan'), {
+    type: 'bar',
+    data: { labels: labelKosan, datasets: [{ label: 'Penghuni', data: dataKosan, backgroundColor: ['#2563eb', '#059669', '#f59e0b', '#dc2626', '#8b5cf6', '#0ea5e9'], borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  // Doughnut chart: status penghuni
+  const aktifCount = penghuni.filter(p => p.status === 'Aktif').length;
+  const selesaiCount = penghuni.filter(p => p.status === 'Selesai').length;
+  if (chartStatus) chartStatus.destroy();
+  chartStatus = new Chart($('chartStatus'), {
+    type: 'doughnut',
+    data: { labels: ['Aktif', 'Selesai'], datasets: [{ data: [aktifCount, selesaiCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // Line chart: penghuni masuk per bulan (6 bulan terakhir)
+  const bulanList = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    bulanList.push(d.toLocaleString('id-ID', { month: 'short', year: '2-digit' }));
+  }
+  const dataBulan = bulanList.map((b, idx) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return penghuni.filter(p => p.tanggalMasuk && p.tanggalMasuk.startsWith(ymd)).length;
+  });
+  if (chartBulan) chartBulan.destroy();
+  chartBulan = new Chart($('chartBulan'), {
+    type: 'line',
+    data: { labels: bulanList, datasets: [{ label: 'Penghuni masuk', data: dataBulan, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#2563eb' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+}
+
+function render() {
+  const kata = $('search').value.toLowerCase();
+  const list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
+  $('dataPenghuni').innerHTML = list.length ? list.map(p => {
+    const jatuh = hitungJatuhTempo(p.tanggalSelesai, p.durasi);
+    return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td>${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+  }).join('') : '<tr><td colspan="10" class="empty">Belum ada data penghuni.</td></tr>';
+
+  const aktif = penghuni.filter(p => p.status === 'Aktif');
+  $('total').textContent = penghuni.length;
+  $('aktif').textContent = aktif.length;
+  $('tempo').textContent = aktif.filter(p => {
+    const j = hitungJatuhTempo(p.tanggalSelesai, p.durasi);
+    return j && selisihHari(j) >= 0 && selisihHari(j) <= 7;
+  }).length;
+
+  renderKosan();
+  renderCharts();
+}
+
+async function loadData() {
+  const hasilPenghuni = await ambilDataJSONP('list');
+  const hasilKosan = await ambilDataJSONP('listKosan');
+  penghuni = hasilPenghuni.data || [];
+  kosan = hasilKosan.data || [];
+  isiDropdownKosan();
+  render();
+}
+
+function edit(id) {
+  const p = penghuni.find(x => x.id === id);
+  if (!p) return;
+  editId = id;
+  const f = $('formPenghuni');
+  f.nama.value = p.nama;
+  f.noHp.value = p.noHp;
+  f.namaKosan.value = p.namaKosan;
+  f.kamar.value = p.kamar;
+  f.tanggalMasuk.value = p.tanggalMasuk;
+  f.durasi.value = p.durasi;
+  f.status.value = p.status;
+  f.kontakNama.value = p.kontakNama;
+  f.kontakNoHp.value = p.kontakNoHp;
+  $('judulForm').textContent = 'Update Data Penghuni';
+  $('btnSimpan').textContent = 'Simpan Perubahan';
+  $('btnReset').textContent = 'Batal';
+  if (editKosanId) batalEditKosan();
+  setStatus($('status'), 'Sedang mengedit data. Ubah lalu klik Simpan Perubahan.');
+  bukaModal('modalPenghuni');
+}
+
+function batalEdit() {
+  editId = null;
+  const f = $('formPenghuni');
+  f.reset();
+  f.durasi.value = 12;
+  $('judulForm').textContent = 'Tambah Penghuni';
+  $('btnSimpan').textContent = 'Simpan Data';
+  $('btnReset').textContent = 'Bersihkan';
+  setStatus($('status'), '');
+  tutupModal('modalPenghuni');
+}
+
+function editKosan(id) {
+  const k = kosan.find(x => x.id === id);
+  if (!k) return;
+  editKosanId = id;
+  const f = $('formKosan');
+  f.namaKosan.value = k.namaKosan;
+  f.jumlahKamar.value = k.jumlahKamar;
+  $('judulKosan').textContent = 'Update Kosan';
+  $('btnSimpanKosan').textContent = 'Simpan Perubahan';
+  $('btnResetKosan').textContent = 'Batal';
+  if (editId) batalEdit();
+  setStatus($('statusKosan'), 'Sedang mengedit kosan. Ubah lalu klik Simpan Perubahan.');
+  bukaModal('modalKosan');
+}
+
+function batalEditKosan() {
+  editKosanId = null;
+  const f = $('formKosan');
+  f.reset();
+  $('judulKosan').textContent = 'Tambah Kosan';
+  $('btnSimpanKosan').textContent = 'Simpan Kosan';
+  $('btnResetKosan').textContent = 'Bersihkan';
+  setStatus($('statusKosan'), '');
+  tutupModal('modalKosan');
+}
+
+// Tombol tambah membuka modal
+$('btnTambahKosan').addEventListener('click', () => {
+  batalEditKosan();
+  bukaModal('modalKosan');
+});
+
+$('btnTambahPenghuni').addEventListener('click', () => {
+  batalEdit();
+  bukaModal('modalPenghuni');
+});
+
+// Tombol close pada modal
+document.querySelectorAll('.modal-close').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const modalId = btn.getAttribute('data-close');
+    if (modalId === 'modalKosan') batalEditKosan();
+    if (modalId === 'modalPenghuni') batalEdit();
+    tutupModal(modalId);
+  });
+});
+
+// Klik di luar modal menutupnya
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => {
+    if (e.target === ov) {
+      const modalId = ov.id;
+      if (modalId === 'modalKosan') batalEditKosan();
+      if (modalId === 'modalPenghuni') batalEdit();
+      tutupModal(modalId);
+    }
+  });
+});
+
+$('formPenghuni').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const mode = editId ? 'update' : 'add';
+  if (editId) data.id = editId;
+  data.action = mode;
+  try {
+    setStatus($('status'), mode === 'update' ? 'Menyimpan perubahan ke Google Sheet...' : 'Menyimpan ke Google Sheet...');
+    await kirimData(data);
+    await loadData();
+    if (mode === 'update') { batalEdit(); setStatus($('status'), 'Data berhasil diperbarui.'); }
+    else { e.target.reset(); e.target.durasi.value = 12; setStatus($('status'), 'Data berhasil tersimpan.'); }
+    tutupModal('modalPenghuni');
+  }
+  catch (error) { setStatus($('status'), 'Gagal: ' + error.message, true); }
+});
+
+$('btnReset').addEventListener('click', batalEdit);
+
+$('formKosan').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const mode = editKosanId ? 'updateKosan' : 'addKosan';
+  if (editKosanId) data.id = editKosanId;
+  data.action = mode;
+  try {
+    setStatus($('statusKosan'), 'Menyimpan kosan ke Google Sheet...');
+    await kirimData(data);
+    await loadData();
+    if (mode === 'updateKosan') { batalEditKosan(); setStatus($('statusKosan'), 'Kosan berhasil diperbarui.'); }
+    else { e.target.reset(); setStatus($('statusKosan'), 'Kosan berhasil ditambahkan.'); }
+    tutupModal('modalKosan');
+  }
+  catch (error) { setStatus($('statusKosan'), 'Gagal: ' + error.message, true); }
+});
+
+$('btnResetKosan').addEventListener('click', batalEditKosan);
+
+$('search').addEventListener('input', render);
+
+async function hapus(id) {
+  if (!confirm('Hapus data penghuni ini?')) return;
+  try {
+    await kirimData({ action: 'delete', id });
+    await loadData();
+    setStatus($('status'), 'Data berhasil dihapus.');
+  }
+  catch (error) { setStatus($('status'), 'Gagal: ' + error.message, true); }
+}
+
+async function hapusKosan(id) {
+  if (!confirm('Hapus kosan ini?')) return;
+  try {
+    await kirimData({ action: 'deleteKosan', id });
+    await loadData();
+    setStatus($('statusKosan'), 'Kosan berhasil dihapus.');
+  }
+  catch (error) { setStatus($('statusKosan'), 'Gagal: ' + error.message, true); }
+}
+
+/* ===== Login & Logout ===== */
+function showLogin() {
+  $('loginScreen').style.display = 'flex';
+  $('dashboard').style.display = 'none';
+}
+
+function showDashboard() {
+  $('loginScreen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+}
+
+function cekSesi() {
+  return sessionStorage.getItem(SESSION_KEY) === '1';
+}
+
+$('formLogin').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const statusLogin = $('statusLogin');
+  if (data.username === LOGIN_USER && data.password === LOGIN_PASS) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    showDashboard();
+    setStatus(statusLogin, '');
+    e.target.reset();
+    try { await loadData(); }
+    catch (error) { setStatus($('status'), 'Gagal memuat dashboard: ' + error.message, true); }
+  } else {
+    setStatus(statusLogin, 'Username atau password salah.', true);
+  }
+});
+
+$('btnLogout').addEventListener('click', () => {
+  sessionStorage.removeItem(SESSION_KEY);
+  showLogin();
+});
+
+// Saat halaman dimuat: tampilkan dashboard jika sudah login, selain itu tampilkan layar login.
+if (cekSesi()) {
+  showDashboard();
+  loadData().catch(error => setStatus($('status'), 'Gagal memuat dashboard: ' + error.message, true));
+} else {
+  showLogin();
+}
+

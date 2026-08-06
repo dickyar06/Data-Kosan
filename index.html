@@ -1,243 +1,138 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DIVA THREE-DI KOST</title>
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <style>
-    :root{--utama:#2563eb;--hejo:#059669;--gelap:#172554;--latar:#f1f5f9;--merah:#dc2626}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--latar);color:#0f172a}header{background:linear-gradient(120deg,var(--gelap),var(--utama));color:#fff;padding:28px max(24px,calc((100vw - 1160px)/2))}h1{margin:0 0 7px;font-size:28px}header p{margin:0;opacity:.85}main{max-width:1160px;margin:26px auto;padding:0 20px 40px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}.card,.panel{background:#fff;border-radius:14px;box-shadow:0 3px 14px #0f172a12}.card{padding:18px;border-left:5px solid var(--utama)}.card small{color:#64748b}.card strong{display:block;font-size:28px;margin-top:7px}.panel{padding:22px;margin-bottom:22px}h2{font-size:20px;margin:0 0 18px}.form{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}label{display:grid;gap:6px;font-size:13px;font-weight:bold;color:#475569}input,select{padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff}input:focus,select:focus{outline:2px solid #93c5fd;border-color:var(--utama)}.actions{display:flex;align-items:end;gap:10px}button{border:0;border-radius:8px;padding:11px 16px;background:var(--utama);color:#fff;font-weight:bold;cursor:pointer;font-size:14px}.secondary{background:#e2e8f0;color:#334155}.green{background:var(--hejo)}.table-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}#search{max-width:290px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1000px}th,td{padding:13px 10px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}td small{display:block;color:#64748b;font-size:12px;margin-top:2px}th{color:#475569;font-size:12px;text-transform:uppercase}.badge{padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}.aktif{background:#dcfce7;color:#166534}.selesai{background:#fee2e2;color:#991b1b}.delete{background:#fee2e2;color:var(--merah);padding:7px 10px}.update{background:#dbeafe;color:var(--utama);padding:7px 10px;margin-right:6px}.empty{text-align:center;color:#64748b;padding:22px}#status{min-height:20px;color:#475569;font-size:13px;margin-top:12px}.error{color:var(--merah)!important}.kosan-card{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:22px}.kosan-card .item{background:#fff;border-radius:12px;box-shadow:0 3px 14px #0f172a12;padding:16px;border-top:4px solid var(--hejo)}.kosan-card .item h3{margin:0 0 8px;font-size:16px}.kosan-card .item p{margin:0;color:#475569;font-size:13px}.kosan-card .item strong{color:var(--hejo);font-size:22px}.charts{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:22px}.chart-box{background:#fff;border-radius:14px;box-shadow:0 3px 14px #0f172a12;padding:20px}.chart-box h3{margin:0 0 14px;font-size:16px;color:#334155}.chart-box.wide{grid-column:1/-1}.chart-box canvas{max-height:300px}.chart-box.tall canvas{max-height:320px}@media(max-width:780px){.cards,.form{grid-template-columns:repeat(2,1fr)}.actions{grid-column:span 2}.charts{grid-template-columns:1fr}.chart-box.wide{grid-column:auto}}@media(max-width:480px){.cards,.form{grid-template-columns:1fr}.actions{grid-column:auto}h1{font-size:23px}}
-  </style>
+  <!-- Style terpisah -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header><h1>🏠 DIVA THREE-DI KOST</h1><p>Dashboard</p></header>
-  <main>
-    <section class="cards"><div class="card"><small>Total kosan</small><strong id="totalKosan">0</strong></div><div class="card"><small>Total penghuni</small><strong id="total">0</strong></div><div class="card"><small>Penghuni aktif</small><strong id="aktif">0</strong></div><div class="card"><small>Jatuh tempo ≤ 7 hari</small><strong id="tempo">0</strong></div></section>
+  <!-- Layar Login -->
+  <div id="loginScreen">
+    <div class="login-box">
+      <div class="login-logo">🏠</div>
+      <h1 class="login-title">DIVA THREE-DI KOST</h1>
+      <p class="login-sub">Silakan masuk untuk melihat dashboard</p>
+      <form id="formLogin" class="login-form">
+        <label>Username<input name="username" required autocomplete="username" placeholder="Masukkan username"></label>
+        <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
+        <button type="submit" id="btnLogin">Masuk</button>
+      </form>
+      <div id="statusLogin"></div>
+    </div>
+  </div>
 
+  <!-- Dashboard (disembunyikan sampai login berhasil) -->
+  <div id="dashboard">
+  <header>
+    <div class="header-wrap">
+      <h1>🏠 DIVA THREE-DI KOST</h1>
+      <button id="btnLogout" class="logout">Keluar</button>
+    </div>
+    <p>Dashboard</p>
+  </header>
+
+  <main>
+    <!-- Kartu statistik -->
+    <section class="cards">
+      <div class="card"><small>Total kosan</small><strong id="totalKosan">0</strong></div>
+      <div class="card"><small>Total penghuni</small><strong id="total">0</strong></div>
+      <div class="card"><small>Penghuni aktif</small><strong id="aktif">0</strong></div>
+      <div class="card"><small>Jatuh tempo ≤ 7 hari</small><strong id="tempo">0</strong></div>
+    </section>
+
+    <!-- Ringkasan kosan -->
     <section class="kosan-card" id="ringkasanKosan"></section>
 
+    <!-- Grafik -->
     <section class="charts">
       <div class="chart-box"><h3>📊 Penghuni per Kosan</h3><canvas id="chartKosan"></canvas></div>
       <div class="chart-box"><h3>🍩 Status Penghuni</h3><canvas id="chartStatus"></canvas></div>
       <div class="chart-box wide"><h3>📈 Penghuni Masuk per Bulan</h3><canvas id="chartBulan"></canvas></div>
     </section>
 
-    <section class="panel"><h2 id="judulKosan">Tambah Kosan</h2><form id="formKosan" class="form"><label>Nama kosan<input name="namaKosan" required placeholder="Contoh: Kosan Cempaka"></label><label>Jumlah kamar<input name="jumlahKamar" required type="number" min="1" placeholder="Contoh: 10"></label><div class="actions"><button type="submit" id="btnSimpanKosan" class="green">Simpan Kosan</button><button type="reset" class="secondary" id="btnResetKosan">Bersihkan</button></div></form><div id="statusKosan"></div></section>
+<!-- Data kosan -->
+    <section class="panel">
+      <div class="table-top"><h2>Data Kosan</h2><button id="btnTambahKosan" class="green">＋ Tambah Kosan</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nama Kosan</th><th>Jumlah Kamar</th><th>Aksi</th></tr></thead>
+          <tbody id="dataKosan"></tbody>
+        </table>
+      </div>
+    </section>
 
-    <section class="panel"><div class="table-top"><h2>Data Kosan</h2></div><div class="table-wrap"><table><thead><tr><th>Nama Kosan</th><th>Jumlah Kamar</th><th>Aksi</th></tr></thead><tbody id="dataKosan"></tbody></table></div></section>
+    <!-- Data penghuni -->
+    <section class="panel">
+      <div class="table-top">
+        <h2>Data Penghuni</h2>
+        <div class="top-actions">
+          <input id="search" placeholder="Cari nama, kamar, atau kosan...">
+          <button id="btnTambahPenghuni">＋ Tambah Penghuni</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Nama</th><th>No. HP</th><th>Kontak Darurat</th><th>Kosan</th><th>Kamar</th><th>Tgl Masuk</th><th>Durasi</th><th>Jatuh Tempo</th><th>Status</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="dataPenghuni"></tbody>
+        </table>
+      </div>
+    </section>
+</main>
+  </div><!-- #dashboard -->
 
-    <section class="panel"><h2 id="judulForm">Input Mahasiswa Masuk</h2><form id="formPenghuni" class="form"><label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label><label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label><label>Nama kosan<select name="namaKosan" required><option value="">-- Pilih kosan --</option></select></label><label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label><label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label><label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label><label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label><label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label><label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label><div class="actions"><button type="submit" id="btnSimpan">Simpan Data</button><button type="reset" class="secondary" id="btnReset">Bersihkan</button></div></form><div id="status"></div></section>
+<!-- Modal Kosan -->
+  <div class="modal-overlay" id="modalKosan">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="judulKosan">Tambah Kosan</h2>
+        <button class="modal-close" data-close="modalKosan">✕</button>
+      </div>
+      <form id="formKosan" class="modal-form">
+        <label>Nama kosan<input name="namaKosan" required placeholder="Contoh: Kosan Cempaka"></label>
+        <label>Jumlah kamar<input name="jumlahKamar" required type="number" min="1" placeholder="Contoh: 10"></label>
+        <div class="actions">
+          <button type="submit" id="btnSimpanKosan" class="green">Simpan Kosan</button>
+          <button type="reset" class="secondary" id="btnResetKosan">Bersihkan</button>
+        </div>
+      </form>
+      <div id="statusKosan"></div>
+    </div>
+  </div>
 
-    <section class="panel"><div class="table-top"><h2>Data Penghuni</h2><input id="search" placeholder="Cari nama, kamar, atau kosan..."></div><div class="table-wrap"><table><thead><tr><th>Nama</th><th>No. HP</th><th>Kontak Darurat</th><th>Kosan</th><th>Kamar</th><th>Tgl Masuk</th><th>Durasi</th><th>Jatuh Tempo</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="dataPenghuni"></tbody></table></div></section>
-  </main>
-  <script>
-    // URL Web App Apps Script. Jangan tambahkan action di sini.
-    const API_URL = 'https://script.google.com/macros/s/AKfycby8dhKxMKqdAJ-ccTDOPvya310xBKLSeLlJfUYXRXVL_5seTfNLTBI-l5i9v6eI92eRtg/exec';
-    let penghuni = [];
-    let kosan = [];
-    let editId = null;
-    let editKosanId = null;
-    let chartKosan = null, chartStatus = null, chartBulan = null;
-    const $ = id => document.getElementById(id);
-    const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value + 'T00:00:00')) : '-';
-    const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
-    // Hitung tanggal jatuh tempo berdasarkan durasi sewa:
-    // durasi >= 3 bulan -> 1 bulan sebelum tanggal selesai; durasi <= 2 bulan -> 7 hari sebelum.
-    const hitungJatuhTempo = (tanggalSelesai, durasi) => {
-      if (!tanggalSelesai) return '';
-      const t = new Date(tanggalSelesai + 'T00:00:00');
-      if (durasi >= 3) t.setMonth(t.getMonth() - 1);
-      else t.setDate(t.getDate() - 7);
-      const y = t.getFullYear();
-      const m = String(t.getMonth() + 1).padStart(2, '0');
-      const d = String(t.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-    const setStatus = (el,teks,error=false) => { el.textContent=teks; el.className=error?'error':''; };
-    const escapeHtml = teks => { const el=document.createElement('div'); el.textContent=teks||''; return el.innerHTML; };
+  <!-- Modal Penghuni -->
+  <div class="modal-overlay" id="modalPenghuni">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="judulForm">Tambah Penghuni</h2>
+        <button class="modal-close" data-close="modalPenghuni">✕</button>
+      </div>
+      <form id="formPenghuni" class="modal-form">
+        <label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label>
+        <label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
+        <label>Nama kosan<select name="namaKosan" required><option value="">-- Pilih kosan --</option></select></label>
+        <label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label>
+        <label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label>
+        <label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label>
+        <label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label>
+        <label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label>
+        <label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
+        <div class="actions">
+          <button type="submit" id="btnSimpan">Simpan Data</button>
+          <button type="reset" class="secondary" id="btnReset">Bersihkan</button>
+        </div>
+      </form>
+      <div id="status"></div>
+    </div>
+  </div>
 
-    // Membaca data memakai JSONP agar berfungsi dari Live Server (127.0.0.1) tanpa masalah CORS.
-    function ambilDataJSONP(aksi) {
-      return new Promise((resolve,reject) => {
-        const callback = 'kosanCallback' + Date.now();
-        const script = document.createElement('script');
-        const bersihkan = () => { delete window[callback]; script.remove(); };
-        window[callback] = hasil => { bersihkan(); resolve(hasil); };
-        script.onerror = () => { bersihkan(); reject(new Error('Tidak dapat membaca data dari Google Sheet. Pastikan Code.gs versi JSONP sudah di-deploy.')); };
-        script.src = API_URL + '?action=' + aksi + '&callback=' + callback;
-        document.body.appendChild(script);
-      });
-    }
-
-    async function kirimData(data) {
-      const response = await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
-      const hasil = await response.json();
-      if (!hasil.success) throw new Error(hasil.message || 'Terjadi kesalahan pada server.');
-      return hasil;
-    }
-
-    function isiDropdownKosan() {
-      const sel = $('formPenghuni').namaKosan;
-      sel.innerHTML = '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('');
-    }
-
-    function renderKosan() {
-      $('dataKosan').innerHTML = kosan.length ? kosan.map(k => `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td><button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
-
-      // Ringkasan: jumlah kamar, terisi, dan sisa per kosan
-      $('ringkasanKosan').innerHTML = kosan.length ? kosan.map(k => {
-        const terisi = penghuni.filter(p => p.namaKosan === k.namaKosan && p.status === 'Aktif').length;
-        const sisa = Math.max(0, k.jumlahKamar - terisi);
-        return `<div class="item"><h3>${escapeHtml(k.namaKosan)}</h3><p>Kamar terisi <strong>${terisi}</strong> / ${k.jumlahKamar}</p><p>Sisa kamar: <strong>${sisa}</strong></p></div>`;
-      }).join('') : '<div class="item"><h3>Belum ada kosan</h3><p>Tambahkan kosan untuk melihat ringkasan.</p></div>';
-
-      $('totalKosan').textContent = kosan.length;
-    }
-
-    function renderCharts() {
-      // Bar chart: penghuni per kosan
-      const labelKosan = kosan.map(k => k.namaKosan);
-      const dataKosan = kosan.map(k => penghuni.filter(p => p.namaKosan === k.namaKosan).length);
-      if (chartKosan) chartKosan.destroy();
-      chartKosan = new Chart($('chartKosan'), {
-        type: 'bar',
-        data: { labels: labelKosan, datasets: [{ label: 'Penghuni', data: dataKosan, backgroundColor: ['#2563eb','#059669','#f59e0b','#dc2626','#8b5cf6','#0ea5e9'], borderRadius: 8 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-      });
-
-      // Doughnut chart: status penghuni
-      const aktifCount = penghuni.filter(p => p.status === 'Aktif').length;
-      const selesaiCount = penghuni.filter(p => p.status === 'Selesai').length;
-      if (chartStatus) chartStatus.destroy();
-      chartStatus = new Chart($('chartStatus'), {
-        type: 'doughnut',
-        data: { labels: ['Aktif','Selesai'], datasets: [{ data: [aktifCount, selesaiCount], backgroundColor: ['#059669','#dc2626'], borderWidth: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-      });
-
-      // Line chart: penghuni masuk per bulan (6 bulan terakhir)
-      const bulanList = [];
-      const now = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        bulanList.push(d.toLocaleString('id-ID',{month:'short',year:'2-digit'}));
-      }
-      const dataBulan = bulanList.map((b, idx) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
-        const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        return penghuni.filter(p => p.tanggalMasuk && p.tanggalMasuk.startsWith(ymd)).length;
-      });
-      if (chartBulan) chartBulan.destroy();
-      chartBulan = new Chart($('chartBulan'), {
-        type: 'line',
-        data: { labels: bulanList, datasets: [{ label: 'Penghuni masuk', data: dataBulan, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#2563eb' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-      });
-    }
-
-    function render() {
-      const kata=$('search').value.toLowerCase();
-      const list=penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
-      $('dataPenghuni').innerHTML=list.length ? list.map(p => { const jatuh=hitungJatuhTempo(p.tanggalSelesai,p.durasi); return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td>${formatTanggal(jatuh)}</td><td><span class="badge ${p.status==='Aktif'?'aktif':'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`; }).join('') : '<tr><td colspan="10" class="empty">Belum ada data penghuni.</td></tr>';
-      const aktif=penghuni.filter(p=>p.status==='Aktif');
-      $('total').textContent=penghuni.length; $('aktif').textContent=aktif.length;
-      $('tempo').textContent=aktif.filter(p=>{ const j=hitungJatuhTempo(p.tanggalSelesai,p.durasi); return j && selisihHari(j)>=0 && selisihHari(j)<=7; }).length;
-      renderKosan();
-      renderCharts();
-    }
-
-    async function loadData() {
-      const hasilPenghuni = await ambilDataJSONP("list");
-      const hasilKosan = await ambilDataJSONP("listKosan");
-      penghuni = hasilPenghuni.data || [];
-      kosan = hasilKosan.data || [];
-      isiDropdownKosan();
-      render();
-    }
-
-    function edit(id) {
-      const p = penghuni.find(x => x.id === id);
-      if (!p) return;
-      editId = id;
-      const f = $('formPenghuni');
-      f.nama.value = p.nama; f.noHp.value = p.noHp; f.namaKosan.value = p.namaKosan; f.kamar.value = p.kamar;
-      f.tanggalMasuk.value = p.tanggalMasuk; f.durasi.value = p.durasi; f.status.value = p.status;
-      f.kontakNama.value = p.kontakNama; f.kontakNoHp.value = p.kontakNoHp;
-      $('judulForm').textContent = 'Update Data Penghuni';
-      $('btnSimpan').textContent = 'Simpan Perubahan';
-      $('btnReset').textContent = 'Batal';
-      if (editKosanId) batalEditKosan();
-      setStatus($('status'),'Sedang mengedit data. Ubah lalu klik Simpan Perubahan.');
-      window.scrollTo({top:0,behavior:'smooth'});
-    }
-
-    function batalEdit() {
-      editId = null;
-      const f = $('formPenghuni');
-      f.reset(); f.durasi.value = 12;
-      $('judulForm').textContent = 'Input Mahasiswa Masuk';
-      $('btnSimpan').textContent = 'Simpan Data';
-      $('btnReset').textContent = 'Bersihkan';
-      setStatus($('status'),'');
-    }
-
-    function editKosan(id) {
-      const k = kosan.find(x => x.id === id);
-      if (!k) return;
-      editKosanId = id;
-      const f = $('formKosan');
-      f.namaKosan.value = k.namaKosan; f.jumlahKamar.value = k.jumlahKamar;
-      $('judulKosan').textContent = 'Update Kosan';
-      $('btnSimpanKosan').textContent = 'Simpan Perubahan';
-      $('btnResetKosan').textContent = 'Batal';
-      if (editId) batalEdit();
-      setStatus($('statusKosan'),'Sedang mengedit kosan. Ubah lalu klik Simpan Perubahan.');
-      window.scrollTo({top:0,behavior:'smooth'});
-    }
-
-    function batalEditKosan() {
-      editKosanId = null;
-      const f = $('formKosan');
-      f.reset();
-      $('judulKosan').textContent = 'Tambah Kosan';
-      $('btnSimpanKosan').textContent = 'Simpan Kosan';
-      $('btnResetKosan').textContent = 'Bersihkan';
-      setStatus($('statusKosan'),'');
-    }
-
-    $('formPenghuni').addEventListener('submit',async e => {
-      e.preventDefault(); const data=Object.fromEntries(new FormData(e.target));
-      const mode = editId ? 'update' : 'add';
-      if (editId) data.id = editId;
-      data.action = mode;
-      try {
-        setStatus($('status'),mode==='update' ? 'Menyimpan perubahan ke Google Sheet...' : 'Menyimpan ke Google Sheet...');
-        await kirimData(data); await loadData();
-        if (mode==='update') { batalEdit(); setStatus($('status'),'Data berhasil diperbarui.'); }
-        else { e.target.reset(); e.target.durasi.value=12; setStatus($('status'),'Data berhasil tersimpan dan tampil di dashboard.'); }
-      }
-      catch(error) { setStatus($('status'),'Gagal: '+error.message,true); }
-    });
-    $('btnReset').addEventListener('click',batalEdit);
-
-    $('formKosan').addEventListener('submit',async e => {
-      e.preventDefault(); const data=Object.fromEntries(new FormData(e.target));
-      const mode = editKosanId ? 'updateKosan' : 'addKosan';
-      if (editKosanId) data.id = editKosanId;
-      data.action = mode;
-      try {
-        setStatus($('statusKosan'),'Menyimpan kosan ke Google Sheet...');
-        await kirimData(data); await loadData();
-        if (mode==='updateKosan') { batalEditKosan(); setStatus($('statusKosan'),'Kosan berhasil diperbarui.'); }
-        else { e.target.reset(); setStatus($('statusKosan'),'Kosan berhasil ditambahkan.'); }
-      }
-      catch(error) { setStatus($('statusKosan'),'Gagal: '+error.message,true); }
-    });
-    $('btnResetKosan').addEventListener('click',batalEditKosan);
-
-    $('search').addEventListener('input',render);
-    async function hapus(id) { if(!confirm('Hapus data penghuni ini?')) return; try { await kirimData({action:'delete',id}); await loadData(); setStatus($('status'),'Data berhasil dihapus.'); } catch(error) { setStatus($('status'),'Gagal: '+error.message,true); } }
-    async function hapusKosan(id) { if(!confirm('Hapus kosan ini?')) return; try { await kirimData({action:'deleteKosan',id}); await loadData(); setStatus($('statusKosan'),'Kosan berhasil dihapus.'); } catch(error) { setStatus($('statusKosan'),'Gagal: '+error.message,true); } }
-    render(); loadData().catch(error => setStatus($('status'),'Gagal memuat dashboard: '+error.message,true));
-  </script>
+  <!-- Script terpisah -->
+  <script src="script.js"></script>
 </body>
 </html>
+

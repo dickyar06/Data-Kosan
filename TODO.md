@@ -1,26 +1,34 @@
-# TODO - Fitur Multi Kosan, Kontak Darurat & Update
+# TODO - Pengembangan Dashboard Data Kosan
 
-## Fitur Pengelolaan Kosan
-1. ✅ `code.gs`: Sheet baru "Kosan" + aksi CRUD (listKosan, addKosan, updateKosan, deleteKosan)
-2. ✅ `index.html`: Form tambah/update kosan (nama + jumlah kamar)
-3. ✅ `index.html`: Tabel data kosan + tombol Update/Hapus
-4. ✅ `index.html`: Ringkasan kamar terisi & sisa per kosan
+## Fitur Kontak Darurat
+1. ✅ `code.gs`: Tambah konstanta `HEADERS` (termasuk Kontak Darurat & No. HP Kontak Darurat)
+2. ✅ `code.gs`: Migrasi otomatis kolom baru pada sheet yang sudah ada
+3. ✅ `code.gs`: Baca & simpan data kontak darurat di `getPenghuni()` / `tambahPenghuni()`
+4. ✅ `index.html`: Tambah field form "Nama kontak darurat" & "No. HP kontak darurat"
+5. ✅ `index.html`: Tambah kolom tabel "Kontak Darurat"
 
-## Penghuni Terkait Kosan
-5. ✅ `code.gs`: Kolom "Nama Kosan" pada penghuni (baca, simpan, update)
-6. ✅ `index.html`: Dropdown "Nama Kosan" di form penghuni
-7. ✅ `index.html`: Kolom "Kosan" di tabel penghuni
+## Grafik Dashboard
+6. ✅ Tambah Chart.js (CDN): bar chart, doughnut chart, line chart
 
-## Fitur Sebelumnya
-8. ✅ `index.html`: Tombol Update/Hapus pada data penghuni + mode edit
-9. ✅ `index.html`: Field & kolom kontak darurat (wajib diisi)
+## Pemisahan File
+7. ✅ Pindahkan CSS ke `style.css`
+8. ✅ Pindahkan JavaScript ke `script.js`
+9. ✅ `index.html` hanya berisi struktur HTML + link ke file terpisah
 
-## Deployment
-10. ✅ (Manual) Redeploy Google Apps Script agar backend aktif — sudah dilakukan & berhasil
+## Fitur Login
+10. ✅ Tambah layar login di `index.html`
+11. ✅ Tambah CSS login di `style.css`
+12. ✅ Tambah logika login/logout di `script.js` (sessionStorage)
+
+## Fitur Popup (Modal)
+13. ✅ Modal untuk tambah data kosan
+14. ✅ Modal untuk tambah data penghuni
+15. ✅ Update data kosan & penghuni muncul lewat modal yang sama
+16. ✅ Tombol "＋ Tambah", tombol close (✕), dan klik di luar modal untuk menutup
+17. ✅ Modal otomatis tertutup setelah data berhasil disimpan
 
 ## Catatan
+- **Kredensial login default:** username `admin`, password `admin123` (ubah pada `LOGIN_USER` / `LOGIN_PASS` di `script.js`)
 - Kontak darurat **WAJIB diisi** (validasi frontend & backend)
-- Nama kosan & jumlah kamar **WAJIB diisi**
-- Penghuni wajib memilih kosan dari dropdown
 - Kolom baru ditempatkan di akhir sheet agar data lama tidak bergeser
-- `code.gs` memakai `SPREADSHEET_ID`, `LockService`, dan dukungan JSONP
+- (Manual) Redeploy Google Apps Script agar perubahan backend aktif
