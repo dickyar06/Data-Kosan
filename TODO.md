@@ -1,40 +1,22 @@
-# TODO - Pengembangan Dashboard Data Kosan
+# TODO - Penambahan Fitur Kontak Darurat & Kartu Jatuh Tempo Interaktif
 
-## Fitur Kontak Darurat
+## Bagian A - Fitur Kontak Darurat
 1. ✅ `code.gs`: Tambah konstanta `HEADERS` (termasuk Kontak Darurat & No. HP Kontak Darurat)
 2. ✅ `code.gs`: Migrasi otomatis kolom baru pada sheet yang sudah ada
 3. ✅ `code.gs`: Baca & simpan data kontak darurat di `getPenghuni()` / `tambahPenghuni()`
 4. ✅ `index.html`: Tambah field form "Nama kontak darurat" & "No. HP kontak darurat"
 5. ✅ `index.html`: Tambah kolom tabel "Kontak Darurat"
+6. ⬜ (Manual) Redeploy Google Apps Script agar backend aktif
 
-## Validasi 1 Kamar = 1 Penghuni Aktif
-- ✅ `code.gs`: Fungsi `cekKamarTerisi_` untuk cek bentrok kamar
-- ✅ `code.gs`: Dipakai di `tambahPenghuni_` (tanpa `excludeId`)
-- ✅ `code.gs`: Dipakai di `updatePenghuni_` (dengan `excludeId` agar data yang diedit tidak dianggap bentrok)
-- ✅ `code.gs`: Perbaikan indentasi agar file bersih
-
-## Grafik Dashboard
-6. ✅ Tambah Chart.js (CDN): bar chart, doughnut chart, line chart
-
-## Pemisahan File
-7. ✅ Pindahkan CSS ke `style.css`
-8. ✅ Pindahkan JavaScript ke `script.js`
-9. ✅ `index.html` hanya berisi struktur HTML + link ke file terpisah
-
-## Fitur Login
-10. ✅ Tambah layar login di `index.html`
-11. ✅ Tambah CSS login di `style.css`
-12. ✅ Tambah logika login/logout di `script.js` (sessionStorage)
-
-## Fitur Popup (Modal)
-13. ✅ Modal untuk tambah data kosan
-14. ✅ Modal untuk tambah data penghuni
-15. ✅ Update data kosan & penghuni muncul lewat modal yang sama
-16. ✅ Tombol "＋ Tambah", tombol close (✕), dan klik di luar modal untuk menutup
-17. ✅ Modal otomatis tertutup setelah data berhasil disimpan
+## Bagian B - Kartu Jatuh Tempo Interaktif
+1. ✅ `index.html`: Kartu "Jatuh tempo" kini bisa diklik (id `kartuTempo`)
+2. ✅ `style.css`: Style klik kartu (hover + highlight aktif)
+3. ✅ `script.js`: Fungsi `akanJatuhTempo()` dan filter `filterTempo`
+4. ✅ `script.js`: Event listener kartu untuk toggle filter & scroll ke tabel
 
 ## Catatan
-- **Kredensial login default:** username `admin`, password `admin123` (ubah pada `LOGIN_USER` / `LOGIN_PASS` di `script.js`)
 - Kontak darurat **WAJIB diisi** (validasi frontend & backend)
 - Kolom baru ditempatkan di akhir sheet agar data lama tidak bergeser
-- (Manual) Redeploy Google Apps Script agar perubahan backend aktif
+- Perubahan pada `code.gs` **wajib di-redeploy** agar backend aktif
+
+

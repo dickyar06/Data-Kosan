@@ -239,6 +239,21 @@ main {
   color: #64748b;
 }
 
+.card.tempo-click {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card.tempo-click:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px #0f172a20;
+}
+
+.card.tempo-click.aktif-kartu {
+  border-left-color: var(--merah);
+  background: #fef2f2;
+}
+
 .card strong {
   display: block;
   font-size: 28px;
@@ -351,6 +366,11 @@ th {
   color: #475569;
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.tempo-dekat {
+  color: var(--merah);
+  font-weight: bold;
 }
 
 .badge {

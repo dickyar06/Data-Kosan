@@ -8,6 +8,7 @@ const SESSION_KEY = 'diva_kosan_login';
 
 let penghuni = [];
 let kosan = [];
+let filterTempo = false;
 let editId = null;
 let editKosanId = null;
 let chartKosan = null, chartStatus = null, chartBulan = null;
@@ -18,13 +19,31 @@ const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID', { day: '
 
 const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
 
-// Hitung tanggal jatuh tempo berdasarkan durasi sewa:
-// durasi >= 3 bulan -> 1 bulan sebelum tanggal selesai; durasi <= 2 bulan -> 7 hari sebelum.
-const hitungJatuhTempo = (tanggalSelesai, durasi) => {
-  if (!tanggalSelesai) return '';
-  const t = new Date(tanggalSelesai + 'T00:00:00');
-  if (durasi >= 3) t.setMonth(t.getMonth() - 1);
-  else t.setDate(t.getDate() - 7);
+// Hitung tanggal jatuh tempo bulanan: jatuh tempo jatuh pada tanggal yang sama dengan tanggal masuk.
+// Contoh: masuk 12 Juli -> jatuh tempo bulanan setiap tanggal 12.
+const hitungJatuhTempo = (tanggalMasuk, tanggalSelesai) => {
+  if (!tanggalMasuk) return '';
+  const mulai = new Date(tanggalMasuk + 'T00:00:00');
+  const dayMasuk = mulai.getDate();
+  const today = new Date();
+  const now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // Kandidat jatuh tempo bulan ini (hari = tanggal masuk, menyesuaikan akhir bulan).
+  const lastDayThis = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  let t = new Date(today.getFullYear(), today.getMonth(), Math.min(dayMasuk, lastDayThis));
+
+  // Jika sudah lewat, ambil bulan berikutnya.
+  if (t < now) {
+    const lastDayNext = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate();
+    t = new Date(today.getFullYear(), today.getMonth() + 1, Math.min(dayMasuk, lastDayNext));
+  }
+
+  // Jangan melewati tanggal selesai sewa.
+  if (tanggalSelesai) {
+    const selesai = new Date(tanggalSelesai + 'T00:00:00');
+    if (t > selesai) t = selesai;
+  }
+
   const y = t.getFullYear();
   const m = String(t.getMonth() + 1).padStart(2, '0');
   const d = String(t.getDate()).padStart(2, '0');
@@ -125,21 +144,32 @@ function renderCharts() {
   });
 }
 
+// Penghuni yang jatuh temponya <= 7 hari (sesuai kartu statistik).
+const akanJatuhTempo = p => {
+  const j = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
+  const hari = j ? selisihHari(j) : null;
+  return p.status === 'Aktif' && hari !== null && hari >= 0 && hari <= 7;
+};
+
 function render() {
   const kata = $('search').value.toLowerCase();
-  const list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
+  let list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
+  if (filterTempo) list = list.filter(akanJatuhTempo);
   $('dataPenghuni').innerHTML = list.length ? list.map(p => {
-    const jatuh = hitungJatuhTempo(p.tanggalSelesai, p.durasi);
-    return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td>${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
-  }).join('') : '<tr><td colspan="10" class="empty">Belum ada data penghuni.</td></tr>';
+    const jatuh = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
+    const hariJatuh = jatuh ? selisihHari(jatuh) : null;
+    const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
+    return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+  }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
 
   const aktif = penghuni.filter(p => p.status === 'Aktif');
   $('total').textContent = penghuni.length;
   $('aktif').textContent = aktif.length;
-  $('tempo').textContent = aktif.filter(p => {
-    const j = hitungJatuhTempo(p.tanggalSelesai, p.durasi);
-    return j && selisihHari(j) >= 0 && selisihHari(j) <= 7;
-  }).length;
+  $('tempo').textContent = aktif.filter(akanJatuhTempo).length;
+
+  // Tandai kartu jatuh tempo aktif saat filter sedang berjalan.
+  const kartu = $('kartuTempo');
+  kartu.classList.toggle('aktif-kartu', filterTempo);
 
   renderKosan();
   renderCharts();
@@ -286,6 +316,14 @@ $('formKosan').addEventListener('submit', async e => {
 $('btnResetKosan').addEventListener('click', batalEditKosan);
 
 $('search').addEventListener('input', render);
+
+// Klik kartu "Jatuh tempo" untuk menampilkan/menyaring penghuni yang akan jatuh tempo.
+$('kartuTempo').addEventListener('click', () => {
+  filterTempo = !filterTempo;
+  render();
+  const panel = document.querySelector('.panel');
+  if (filterTempo && panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 async function hapus(id) {
   if (!confirm('Hapus data penghuni ini?')) return;
