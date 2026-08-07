@@ -39,7 +39,16 @@
     <p>Data Kosan & Penghuni</p>
   </header>
 
-  <main>
+<main>
+    <!-- Status Kamar -->
+    <section class="panel">
+      <div class="table-top">
+        <h2>Status Kamar</h2>
+        <select id="pilihKamarKosan"></select>
+      </div>
+      <div id="statusKamar"></div>
+    </section>
+
     <!-- Data kosan -->
     <section class="panel">
       <div class="table-top"><h2>Data Kosan</h2><button id="btnTambahKosan" class="green">＋ Tambah Kosan</button></div>
@@ -102,7 +111,7 @@
         <label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label>
         <label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
         <label>Nama kosan<select name="namaKosan" required><option value="">-- Pilih kosan --</option></select></label>
-        <label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label>
+        <label>Nomor kamar<select name="kamar" required><option value="">-- Pilih kamar --</option></select></label>
         <label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label>
         <label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label>
         <label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label>

@@ -54,6 +54,15 @@ const setStatus = (el, teks, error = false) => { if (el) { el.textContent = teks
 
 const escapeHtml = teks => { const el = document.createElement('div'); el.textContent = teks || ''; return el.innerHTML; };
 
+// Normalisasi nomor kamar menjadi format berurutan 01, 02, dst.
+// Contoh: "1" -> "01", "A-01" -> "01", "B-02" -> "02", "12" -> "12"
+const normKamar = teks => {
+  const s = String(teks || '').trim();
+  const cocok = s.match(/(?:^|[^0-9])(\d+)(?:[^0-9]|$)/);
+  const angka = cocok ? cocok[1] : '';
+  return angka ? angka.padStart(2, '0') : '';
+};
+
 /* ===== Helper Modal ===== */
 function bukaModal(id) {
   const el = document.getElementById(id);
@@ -90,6 +99,83 @@ function isiDropdownKosan() {
   if (!form || !form.namaKosan) return;
   const sel = form.namaKosan;
   sel.innerHTML = '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('');
+  isiDropdownKamar();
+}
+
+// Mengisi dropdown "Nomor kamar" berdasarkan kosan yang dipilih.
+// Hanya menampilkan kamar yang KOSONG (belum diisi penghuni aktif).
+function isiDropdownKamar() {
+  const form = $('formPenghuni');
+  if (!form || !form.kamar) return;
+  const namaKosan = form.namaKosan ? form.namaKosan.value : '';
+  const sel = form.kamar;
+
+  if (!namaKosan) {
+    sel.innerHTML = '<option value="">-- Pilih kosan dulu --</option>';
+    return;
+  }
+
+  const kosanDipilih = kosan.find(k => k.namaKosan === namaKosan);
+  const jumlah = kosanDipilih ? Number(kosanDipilih.jumlahKamar) : 0;
+
+// Daftar kamar yang sudah terisi oleh penghuni aktif pada kosan ini (dinormalisasi)
+  const terisi = new Set(penghuni.filter(p => p.namaKosan === namaKosan && p.status === 'Aktif').map(p => normKamar(p.kamar)));
+
+  // Saat mengedit, kamar penghuni sekarang harus tetap tersedia (ditandai meski terisi)
+  const sedangEditKamar = editId ? normKamar(form.kamar.dataset.kamarSaatIni) : '';
+
+  const opsi = [];
+  for (let i = 1; i <= jumlah; i++) {
+    const label = String(i).padStart(2, '0');
+    const sudahTerisi = terisi.has(label);
+    if (sudahTerisi && label !== sedangEditKamar) continue; // sembunyikan kamar yang terisi (kecuali kamar yang sedang diedit)
+    opsi.push(`<option value="${label}">Kamar ${label}${sudahTerisi ? ' (kamar ini)' : ''}</option>`);
+  }
+
+  sel.innerHTML = opsi.length
+    ? '<option value="">-- Pilih kamar --</option>' + opsi.join('')
+    : '<option value="">Semua kamar sudah terisi</option>';
+}
+
+function renderStatusKamar() {
+  const pilih = $('pilihKamarKosan');
+  const kontainer = $('statusKamar');
+  if (!pilih || !kontainer) return;
+
+  // Isi dropdown pilihan kosan hanya jika kosan belum dimuat atau saat daftar kosan dipilih
+  const nilaiSaatIni = pilih.value;
+  pilih.innerHTML = kosan.length ? '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('') : '<option value="">Belum ada kosan</option>';
+  if (nilaiSaatIni) pilih.value = nilaiSaatIni;
+
+  const namaKosan = pilih.value;
+  if (!namaKosan) {
+    kontainer.innerHTML = '<div class="empty">Pilih kosan untuk melihat status kamar.</div>';
+    return;
+  }
+
+  const kosanDipilih = kosan.find(k => k.namaKosan === namaKosan);
+  const jumlah = kosanDipilih ? Number(kosanDipilih.jumlahKamar) : 0;
+  const penghuniKosan = penghuni.filter(p => p.namaKosan === namaKosan && p.status === 'Aktif');
+
+  // Bangun daftar kamar 01..jumlah; tandai yang terisi (dinormalisasi agar cocok dengan A-01, 01, 1)
+  const kamarTerisi = new Set(penghuniKosan.map(p => normKamar(p.kamar)));
+  const daftar = [];
+  for (let i = 1; i <= jumlah; i++) {
+    const label = String(i).padStart(2, '0');
+    daftar.push({ label, terisi: kamarTerisi.has(label) });
+  }
+
+  const terisi = daftar.filter(k => k.terisi).length;
+  const kosong = jumlah - terisi;
+
+  kontainer.innerHTML = `
+    <div class="status-kamar-ringkasan">
+      <div class="sk-item"><span class="sk-dot terisi"></span> Terisi: <strong>${terisi}</strong></div>
+      <div class="sk-item"><span class="sk-dot kosong"></span> Kosong: <strong>${kosong}</strong></div>
+    </div>
+    <div class="status-kamar-grid">
+      ${daftar.map(k => `<div class="sk-tile ${k.terisi ? 'terisi' : 'kosong'}">Kamar ${k.label}</div>`).join('')}
+    </div>`;
 }
 
 function renderKosan() {
@@ -184,7 +270,7 @@ function render() {
       const jatuh = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
       const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
-      return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
     }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
@@ -202,6 +288,7 @@ function render() {
   if (kartu) kartu.classList.toggle('aktif-kartu', filterTempo);
 
   renderKosan();
+  renderStatusKamar();
   renderCharts();
 }
 
@@ -215,13 +302,16 @@ async function loadData() {
 }
 
 function edit(id) {
-  const p = penghuni.find(x => x.id === id);
+const p = penghuni.find(x => x.id === id);
   if (!p) return;
   editId = id;
   const f = $('formPenghuni');
   f.nama.value = p.nama;
   f.noHp.value = p.noHp;
   f.namaKosan.value = p.namaKosan;
+  // Simpan kamar yang sedang diedit agar tetap tampil di dropdown kamar
+  f.kamar.dataset.kamarSaatIni = p.kamar;
+  isiDropdownKamar();
   f.kamar.value = p.kamar;
   f.tanggalMasuk.value = p.tanggalMasuk;
   f.durasi.value = p.durasi;
@@ -326,6 +416,12 @@ if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
 const btnReset = $('btnReset');
 if (btnReset) btnReset.addEventListener('click', batalEdit);
 
+// Saat kosan dipilih pada form penghuni, isi ulang dropdown kamar
+const formPenghuni2 = $('formPenghuni');
+if (formPenghuni2 && formPenghuni2.namaKosan) {
+  formPenghuni2.namaKosan.addEventListener('change', isiDropdownKamar);
+}
+
 const formKosan = $('formKosan');
 if (formKosan) formKosan.addEventListener('submit', async e => {
   e.preventDefault();
@@ -349,6 +445,10 @@ if (btnResetKosan) btnResetKosan.addEventListener('click', batalEditKosan);
 
 const search = $('search');
 if (search) search.addEventListener('input', render);
+
+// Pilih kosan pada panel Status Kamar
+const pilihKamarKosan = $('pilihKamarKosan');
+if (pilihKamarKosan) pilihKamarKosan.addEventListener('change', renderStatusKamar);
 
 // Klik kartu "Jatuh tempo" (halaman dashboard) untuk membuka halaman data dengan filter jatuh tempo.
 const kartuTempo = $('kartuTempo');

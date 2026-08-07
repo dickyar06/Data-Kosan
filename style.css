@@ -452,6 +452,68 @@ th {
   margin-top: 12px;
 }
 
+/* Status Kamar */
+.status-kamar-ringkasan {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sk-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.sk-item strong {
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.sk-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sk-dot.terisi {
+  background: #dc2626;
+}
+
+.sk-dot.kosong {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.status-kamar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.sk-tile {
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.sk-tile.terisi {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sk-tile.kosong {
+  background: #dcfce7;
+  color: #166534;
+}
+
 .error {
   color: var(--merah) !important;
 }
