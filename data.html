@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DIVA THREE-DI KOST - Data</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Style terpisah -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="halaman-data">
+  <!-- Layar Login -->
+  <div id="loginScreen">
+    <div class="login-box">
+      <div class="login-logo">🏠</div>
+      <h1 class="login-title">DIVA THREE-DI KOST</h1>
+      <p class="login-sub">Silakan masuk untuk melihat data</p>
+      <form id="formLogin" class="login-form">
+        <label>Username<input name="username" required autocomplete="username" placeholder="Masukkan username"></label>
+        <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
+        <button type="submit" id="btnLogin">Masuk</button>
+      </form>
+      <div id="statusLogin"></div>
+    </div>
+  </div>
+
+  <!-- Data (disembunyikan sampai login berhasil) -->
+  <div id="dashboard">
+  <header>
+    <div class="header-wrap">
+      <h1>🏠 DIVA THREE-DI KOST</h1>
+      <nav class="nav">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link aktif" href="data.html">Data</a>
+        <button id="btnLogout" class="logout">Keluar</button>
+      </nav>
+    </div>
+    <p>Data Kosan & Penghuni</p>
+  </header>
+
+  <main>
+    <!-- Data kosan -->
+    <section class="panel">
+      <div class="table-top"><h2>Data Kosan</h2><button id="btnTambahKosan" class="green">＋ Tambah Kosan</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nama Kosan</th><th>Jumlah Kamar</th><th>Aksi</th></tr></thead>
+          <tbody id="dataKosan"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Data penghuni -->
+    <section class="panel">
+      <div class="table-top">
+        <h2>Data Penghuni</h2>
+        <div class="top-actions">
+          <input id="search" placeholder="Cari nama, kamar, atau kosan...">
+          <button id="btnTambahPenghuni">＋ Tambah Penghuni</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Nama</th><th>No. HP</th><th>Kontak Darurat</th><th>Kosan</th><th>Kamar</th><th>Tgl Masuk</th><th>Durasi</th><th>Jatuh Tempo</th><th>Status</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="dataPenghuni"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  </div><!-- #dashboard -->
+
+  <!-- Modal Kosan -->
+  <div class="modal-overlay" id="modalKosan">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="judulKosan">Tambah Kosan</h2>
+        <button class="modal-close" data-close="modalKosan">✕</button>
+      </div>
+      <form id="formKosan" class="modal-form">
+        <label>Nama kosan<input name="namaKosan" required placeholder="Contoh: Kosan Cempaka"></label>
+        <label>Jumlah kamar<input name="jumlahKamar" required type="number" min="1" placeholder="Contoh: 10"></label>
+        <div class="actions">
+          <button type="submit" id="btnSimpanKosan" class="green">Simpan Kosan</button>
+          <button type="reset" class="secondary" id="btnResetKosan">Bersihkan</button>
+        </div>
+      </form>
+      <div id="statusKosan"></div>
+    </div>
+  </div>
+
+  <!-- Modal Penghuni -->
+  <div class="modal-overlay" id="modalPenghuni">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="judulForm">Tambah Penghuni</h2>
+        <button class="modal-close" data-close="modalPenghuni">✕</button>
+      </div>
+      <form id="formPenghuni" class="modal-form">
+        <label>Nama lengkap<input name="nama" required placeholder="Contoh: Budi Santoso"></label>
+        <label>No. HP<input name="noHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
+        <label>Nama kosan<select name="namaKosan" required><option value="">-- Pilih kosan --</option></select></label>
+        <label>Nomor kamar<input name="kamar" required placeholder="Contoh: A-01"></label>
+        <label>Tanggal masuk<input name="tanggalMasuk" required type="date"></label>
+        <label>Durasi sewa (bulan)<input name="durasi" required type="number" min="1" value="12"></label>
+        <label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label>
+        <label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label>
+        <label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
+        <div class="actions">
+          <button type="submit" id="btnSimpan">Simpan Data</button>
+          <button type="reset" class="secondary" id="btnReset">Bersihkan</button>
+        </div>
+      </form>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <!-- Script terpisah -->
+  <script src="script.js"></script>
+</body>
+</html>

@@ -50,7 +50,7 @@ const hitungJatuhTempo = (tanggalMasuk, tanggalSelesai) => {
   return `${y}-${m}-${d}`;
 };
 
-const setStatus = (el, teks, error = false) => { el.textContent = teks; el.className = error ? 'error' : ''; };
+const setStatus = (el, teks, error = false) => { if (el) { el.textContent = teks; el.className = error ? 'error' : ''; } };
 
 const escapeHtml = teks => { const el = document.createElement('div'); el.textContent = teks || ''; return el.innerHTML; };
 
@@ -86,62 +86,83 @@ async function kirimData(data) {
 }
 
 function isiDropdownKosan() {
-  const sel = $('formPenghuni').namaKosan;
+  const form = $('formPenghuni');
+  if (!form || !form.namaKosan) return;
+  const sel = form.namaKosan;
   sel.innerHTML = '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('');
 }
 
 function renderKosan() {
-  $('dataKosan').innerHTML = kosan.length ? kosan.map(k => `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td><button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
+  // Tabel Data Kosan (halaman data)
+  const dataKosan = $('dataKosan');
+  if (dataKosan) {
+    dataKosan.innerHTML = kosan.length ? kosan.map(k => `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td><button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
+  }
 
-  // Ringkasan: jumlah kamar, terisi, dan sisa per kosan
-  $('ringkasanKosan').innerHTML = kosan.length ? kosan.map(k => {
-    const terisi = penghuni.filter(p => p.namaKosan === k.namaKosan && p.status === 'Aktif').length;
-    const sisa = Math.max(0, k.jumlahKamar - terisi);
-    return `<div class="item"><h3>${escapeHtml(k.namaKosan)}</h3><p>Kamar terisi <strong>${terisi}</strong> / ${k.jumlahKamar}</p><p>Sisa kamar: <strong>${sisa}</strong></p></div>`;
-  }).join('') : '<div class="item"><h3>Belum ada kosan</h3><p>Tambahkan kosan untuk melihat ringkasan.</p></div>';
+  // Ringkasan kosan (halaman dashboard)
+  const ringkasan = $('ringkasanKosan');
+  if (ringkasan) {
+    ringkasan.innerHTML = kosan.length ? kosan.map(k => {
+      const terisi = penghuni.filter(p => p.namaKosan === k.namaKosan && p.status === 'Aktif').length;
+      const sisa = Math.max(0, k.jumlahKamar - terisi);
+      return `<div class="item"><h3>${escapeHtml(k.namaKosan)}</h3><p>Kamar terisi <strong>${terisi}</strong> / ${k.jumlahKamar}</p><p>Sisa kamar: <strong>${sisa}</strong></p></div>`;
+    }).join('') : '<div class="item"><h3>Belum ada kosan</h3><p>Tambahkan kosan untuk melihat ringkasan.</p></div>';
+  }
 
-  $('totalKosan').textContent = kosan.length;
+  const totalKosan = $('totalKosan');
+  if (totalKosan) totalKosan.textContent = kosan.length;
 }
 
 function renderCharts() {
+  if (!window.Chart) return;
+  const canvasKosan = $('chartKosan');
+  const canvasStatus = $('chartStatus');
+  const canvasBulan = $('chartBulan');
+
   // Bar chart: penghuni per kosan
-  const labelKosan = kosan.map(k => k.namaKosan);
-  const dataKosan = kosan.map(k => penghuni.filter(p => p.namaKosan === k.namaKosan).length);
-  if (chartKosan) chartKosan.destroy();
-  chartKosan = new Chart($('chartKosan'), {
-    type: 'bar',
-    data: { labels: labelKosan, datasets: [{ label: 'Penghuni', data: dataKosan, backgroundColor: ['#2563eb', '#059669', '#f59e0b', '#dc2626', '#8b5cf6', '#0ea5e9'], borderRadius: 8 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-  });
+  if (canvasKosan) {
+    const labelKosan = kosan.map(k => k.namaKosan);
+    const dataKosan = kosan.map(k => penghuni.filter(p => p.namaKosan === k.namaKosan).length);
+    if (chartKosan) chartKosan.destroy();
+    chartKosan = new Chart(canvasKosan, {
+      type: 'bar',
+      data: { labels: labelKosan, datasets: [{ label: 'Penghuni', data: dataKosan, backgroundColor: ['#2563eb', '#059669', '#f59e0b', '#dc2626', '#8b5cf6', '#0ea5e9'], borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  }
 
   // Doughnut chart: status penghuni
-  const aktifCount = penghuni.filter(p => p.status === 'Aktif').length;
-  const selesaiCount = penghuni.filter(p => p.status === 'Selesai').length;
-  if (chartStatus) chartStatus.destroy();
-  chartStatus = new Chart($('chartStatus'), {
-    type: 'doughnut',
-    data: { labels: ['Aktif', 'Selesai'], datasets: [{ data: [aktifCount, selesaiCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 2 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-  });
+  if (canvasStatus) {
+    const aktifCount = penghuni.filter(p => p.status === 'Aktif').length;
+    const selesaiCount = penghuni.filter(p => p.status === 'Selesai').length;
+    if (chartStatus) chartStatus.destroy();
+    chartStatus = new Chart(canvasStatus, {
+      type: 'doughnut',
+      data: { labels: ['Aktif', 'Selesai'], datasets: [{ data: [aktifCount, selesaiCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
 
   // Line chart: penghuni masuk per bulan (6 bulan terakhir)
-  const bulanList = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    bulanList.push(d.toLocaleString('id-ID', { month: 'short', year: '2-digit' }));
+  if (canvasBulan) {
+    const bulanList = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      bulanList.push(d.toLocaleString('id-ID', { month: 'short', year: '2-digit' }));
+    }
+    const dataBulan = bulanList.map((b, idx) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+      const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return penghuni.filter(p => p.tanggalMasuk && p.tanggalMasuk.startsWith(ymd)).length;
+    });
+    if (chartBulan) chartBulan.destroy();
+    chartBulan = new Chart(canvasBulan, {
+      type: 'line',
+      data: { labels: bulanList, datasets: [{ label: 'Penghuni masuk', data: dataBulan, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#2563eb' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
   }
-  const dataBulan = bulanList.map((b, idx) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
-    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return penghuni.filter(p => p.tanggalMasuk && p.tanggalMasuk.startsWith(ymd)).length;
-  });
-  if (chartBulan) chartBulan.destroy();
-  chartBulan = new Chart($('chartBulan'), {
-    type: 'line',
-    data: { labels: bulanList, datasets: [{ label: 'Penghuni masuk', data: dataBulan, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#2563eb' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-  });
 }
 
 // Penghuni yang jatuh temponya <= 7 hari (sesuai kartu statistik).
@@ -152,24 +173,33 @@ const akanJatuhTempo = p => {
 };
 
 function render() {
-  const kata = $('search').value.toLowerCase();
-  let list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
-  if (filterTempo) list = list.filter(akanJatuhTempo);
-  $('dataPenghuni').innerHTML = list.length ? list.map(p => {
-    const jatuh = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
-    const hariJatuh = jatuh ? selisihHari(jatuh) : null;
-    const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
-    return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
-  }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
+  // Tabel penghuni (halaman data)
+  const dataPenghuni = $('dataPenghuni');
+  const search = $('search');
+  if (dataPenghuni) {
+    const kata = search ? search.value.toLowerCase() : '';
+    let list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
+    if (filterTempo) list = list.filter(akanJatuhTempo);
+    dataPenghuni.innerHTML = list.length ? list.map(p => {
+      const jatuh = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
+      const hariJatuh = jatuh ? selisihHari(jatuh) : null;
+      const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
+      return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(p.kamar)}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+    }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
+  }
 
+  // Kartu statistik (halaman dashboard)
   const aktif = penghuni.filter(p => p.status === 'Aktif');
-  $('total').textContent = penghuni.length;
-  $('aktif').textContent = aktif.length;
-  $('tempo').textContent = aktif.filter(akanJatuhTempo).length;
+  const totalEl = $('total');
+  const aktifEl = $('aktif');
+  const tempoEl = $('tempo');
+  if (totalEl) totalEl.textContent = penghuni.length;
+  if (aktifEl) aktifEl.textContent = aktif.length;
+  if (tempoEl) tempoEl.textContent = aktif.filter(akanJatuhTempo).length;
 
   // Tandai kartu jatuh tempo aktif saat filter sedang berjalan.
   const kartu = $('kartuTempo');
-  kartu.classList.toggle('aktif-kartu', filterTempo);
+  if (kartu) kartu.classList.toggle('aktif-kartu', filterTempo);
 
   renderKosan();
   renderCharts();
@@ -209,6 +239,7 @@ function edit(id) {
 function batalEdit() {
   editId = null;
   const f = $('formPenghuni');
+  if (!f) return;
   f.reset();
   f.durasi.value = 12;
   $('judulForm').textContent = 'Tambah Penghuni';
@@ -236,6 +267,7 @@ function editKosan(id) {
 function batalEditKosan() {
   editKosanId = null;
   const f = $('formKosan');
+  if (!f) return;
   f.reset();
   $('judulKosan').textContent = 'Tambah Kosan';
   $('btnSimpanKosan').textContent = 'Simpan Kosan';
@@ -244,16 +276,12 @@ function batalEditKosan() {
   tutupModal('modalKosan');
 }
 
-// Tombol tambah membuka modal
-$('btnTambahKosan').addEventListener('click', () => {
-  batalEditKosan();
-  bukaModal('modalKosan');
-});
+// Tombol tambah membuka modal (halaman data)
+const btnTambahKosan = $('btnTambahKosan');
+if (btnTambahKosan) btnTambahKosan.addEventListener('click', () => { batalEditKosan(); bukaModal('modalKosan'); });
 
-$('btnTambahPenghuni').addEventListener('click', () => {
-  batalEdit();
-  bukaModal('modalPenghuni');
-});
+const btnTambahPenghuni = $('btnTambahPenghuni');
+if (btnTambahPenghuni) btnTambahPenghuni.addEventListener('click', () => { batalEdit(); bukaModal('modalPenghuni'); });
 
 // Tombol close pada modal
 document.querySelectorAll('.modal-close').forEach(btn => {
@@ -277,7 +305,8 @@ document.querySelectorAll('.modal-overlay').forEach(ov => {
   });
 });
 
-$('formPenghuni').addEventListener('submit', async e => {
+const formPenghuni = $('formPenghuni');
+if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
   const mode = editId ? 'update' : 'add';
@@ -294,9 +323,11 @@ $('formPenghuni').addEventListener('submit', async e => {
   catch (error) { setStatus($('status'), 'Gagal: ' + error.message, true); }
 });
 
-$('btnReset').addEventListener('click', batalEdit);
+const btnReset = $('btnReset');
+if (btnReset) btnReset.addEventListener('click', batalEdit);
 
-$('formKosan').addEventListener('submit', async e => {
+const formKosan = $('formKosan');
+if (formKosan) formKosan.addEventListener('submit', async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
   const mode = editKosanId ? 'updateKosan' : 'addKosan';
@@ -313,16 +344,18 @@ $('formKosan').addEventListener('submit', async e => {
   catch (error) { setStatus($('statusKosan'), 'Gagal: ' + error.message, true); }
 });
 
-$('btnResetKosan').addEventListener('click', batalEditKosan);
+const btnResetKosan = $('btnResetKosan');
+if (btnResetKosan) btnResetKosan.addEventListener('click', batalEditKosan);
 
-$('search').addEventListener('input', render);
+const search = $('search');
+if (search) search.addEventListener('input', render);
 
-// Klik kartu "Jatuh tempo" untuk menampilkan/menyaring penghuni yang akan jatuh tempo.
-$('kartuTempo').addEventListener('click', () => {
-  filterTempo = !filterTempo;
-  render();
-  const panel = document.querySelector('.panel');
-  if (filterTempo && panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Klik kartu "Jatuh tempo" (halaman dashboard) untuk membuka halaman data dengan filter jatuh tempo.
+const kartuTempo = $('kartuTempo');
+if (kartuTempo) kartuTempo.addEventListener('click', () => {
+  filterTempo = true;
+  sessionStorage.setItem('filterTempo', '1');
+  location.href = 'data.html';
 });
 
 async function hapus(id) {
@@ -360,7 +393,8 @@ function cekSesi() {
   return sessionStorage.getItem(SESSION_KEY) === '1';
 }
 
-$('formLogin').addEventListener('submit', async e => {
+const formLogin = $('formLogin');
+if (formLogin) formLogin.addEventListener('submit', async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
   const statusLogin = $('statusLogin');
@@ -376,10 +410,17 @@ $('formLogin').addEventListener('submit', async e => {
   }
 });
 
-$('btnLogout').addEventListener('click', () => {
+const btnLogout = $('btnLogout');
+if (btnLogout) btnLogout.addEventListener('click', () => {
   sessionStorage.removeItem(SESSION_KEY);
   showLogin();
 });
+
+// Ambil filter jatuh tempo dari sesi (saat berpindah dari halaman dashboard).
+if (cekSesi() && sessionStorage.getItem('filterTempo') === '1') {
+  sessionStorage.removeItem('filterTempo');
+  filterTempo = true;
+}
 
 // Saat halaman dimuat: tampilkan dashboard jika sudah login, selain itu tampilkan layar login.
 if (cekSesi()) {
@@ -388,4 +429,3 @@ if (cekSesi()) {
 } else {
   showLogin();
 }
-
