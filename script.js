@@ -9,6 +9,17 @@ const SESSION_KEY = 'diva_kosan_login';
 let penghuni = [];
 let kosan = [];
 let filterTempo = false;
+let columnFilters = {
+  nama: [],
+  noHp: [],
+  kontakNama: [],
+  namaKosan: [],
+  kamar: [],
+  tanggalMasuk: [],
+  durasi: [],
+  tanggalSelesai: [],
+  status: []
+};
 let editId = null;
 let editKosanId = null;
 let chartKosan = null, chartStatus = null, chartBulan = null;
@@ -227,14 +238,84 @@ const akanJatuhTempo = p => {
   return hari !== null && hari >= 0 && hari <= 7;
 };
 
+function getColumnValue(column, p) {
+  if (column === 'kamar') return normKamar(p.kamar);
+  if (column === 'tanggalMasuk') return p.tanggalMasuk;
+  if (column === 'tanggalSelesai') return p.tanggalSelesai || 'Belum ada';
+  if (column === 'durasi') return String(p.durasi);
+  return p[column];
+}
+
+function getColumnFilterValues(column) {
+  const values = new Set(['Semua']);
+  const list = penghuni.filter(p => {
+    return Object.entries(columnFilters).every(([key, selectedValues]) => {
+      if (key === column || !selectedValues || selectedValues.length === 0) return true;
+      return selectedValues.includes(String(getColumnValue(key, p)));
+    });
+  });
+
+  list.forEach(p => {
+    const key = getColumnValue(column, p);
+    if (key !== undefined && key !== null && key !== '') values.add(String(key));
+  });
+  return [...values];
+}
+
+function renderColumnFilterMenus() {
+  document.querySelectorAll('.filter-trigger').forEach(button => {
+    const column = button.dataset.column;
+    const menu = button.parentElement.querySelector('.filter-menu');
+    if (!menu) return;
+
+    const selectedValues = columnFilters[column] || [];
+    const activeCount = selectedValues.length;
+    const isFiltered = activeCount > 0;
+    button.classList.toggle('active', isFiltered);
+    button.textContent = isFiltered ? `▼ ${activeCount}` : '⏷';
+
+    const values = getColumnFilterValues(column);
+    const options = values.map(value => {
+      const label = value === 'Semua' ? 'Semua' : value;
+      const selected = value === 'Semua' ? activeCount === 0 : selectedValues.includes(value);
+      return `<button type="button" class="filter-option ${selected ? 'active' : ''}" data-column="${column}" data-value="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
+    }).join('');
+
+    const headerActions = `
+      <div class="filter-actions">
+        <button type="button" class="filter-select-all" data-column="${column}">Pilih semua</button>
+        <button type="button" class="filter-clear-all" data-column="${column}">Kosongkan</button>
+      </div>
+    `;
+
+    menu.innerHTML = `${headerActions}${options}`;
+  });
+}
+
+function getFilteredPenghuniList() {
+  const search = $('search');
+  const kata = search ? search.value.toLowerCase() : '';
+
+  return penghuni.filter(p => {
+    const columnMatches = Object.entries(columnFilters).every(([column, selectedValues]) => {
+      if (!selectedValues || selectedValues.length === 0) return true;
+      const target = getColumnValue(column, p);
+      return selectedValues.includes(String(target));
+    });
+
+    const cocokCari = `${p.nama} ${p.kamar} ${p.namaKosan} ${p.noHp}`.toLowerCase().includes(kata);
+    const cocokTempo = !filterTempo || akanJatuhTempo(p);
+    return columnMatches && cocokCari && cocokTempo;
+  });
+}
+
 function render() {
+  renderColumnFilterMenus();
+
   // Tabel penghuni (halaman data)
   const dataPenghuni = $('dataPenghuni');
-  const search = $('search');
   if (dataPenghuni) {
-    const kata = search ? search.value.toLowerCase() : '';
-    let list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
-if (filterTempo) list = list.filter(akanJatuhTempo);
+    const list = getFilteredPenghuniList();
     dataPenghuni.innerHTML = list.length ? list.map(p => {
       const jatuh = p.tanggalSelesai || '';
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
@@ -414,6 +495,120 @@ if (btnResetKosan) btnResetKosan.addEventListener('click', batalEditKosan);
 
 const search = $('search');
 if (search) search.addEventListener('input', render);
+
+const btnResetFilter = $('btnResetFilter');
+if (btnResetFilter) btnResetFilter.addEventListener('click', () => {
+  Object.keys(columnFilters).forEach(key => columnFilters[key] = []);
+  filterTempo = false;
+  if (search) search.value = '';
+  render();
+});
+
+const btnExportExcel = $('btnExportExcel');
+if (btnExportExcel) btnExportExcel.addEventListener('click', () => {
+  if (!window.XLSX) {
+    alert('Library Excel belum siap. Silakan muat ulang halaman.');
+    return;
+  }
+
+  const list = getFilteredPenghuniList();
+  if (!list.length) {
+    alert('Tidak ada data penghuni yang bisa diekspor.');
+    return;
+  }
+
+  const rows = list.map(p => ({
+    Nama: p.nama,
+    'No. HP': p.noHp,
+    'Kontak Darurat': p.kontakNama,
+    'No. HP Kontak Darurat': p.kontakNoHp,
+    Kosan: p.namaKosan,
+    Kamar: normKamar(p.kamar),
+    'Tanggal Masuk': formatTanggal(p.tanggalMasuk),
+    Durasi: `${p.durasi} bulan`,
+    'Jatuh Tempo': formatTanggal(p.tanggalSelesai || ''),
+    Status: p.status
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Penghuni');
+  XLSX.writeFile(workbook, 'data-penghuni.xlsx');
+  alert('File Excel berhasil diekspor.');
+});
+
+function openFilterMenu(trigger) {
+  const menu = trigger.parentElement.querySelector('.filter-menu');
+  if (!menu) return;
+
+  const rect = trigger.getBoundingClientRect();
+  menu.style.left = `${Math.min(rect.left, window.innerWidth - 220)}px`;
+  menu.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 240)}px`;
+  menu.style.width = '180px';
+
+  document.querySelectorAll('.filter-menu').forEach(item => {
+    if (item !== menu) item.classList.add('hidden');
+  });
+  menu.classList.remove('hidden');
+}
+
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('.filter-trigger');
+  if (trigger) {
+    const menu = trigger.parentElement.querySelector('.filter-menu');
+    const willOpen = menu && menu.classList.contains('hidden');
+    if (willOpen) {
+      openFilterMenu(trigger);
+    } else {
+      menu.classList.add('hidden');
+    }
+    return;
+  }
+
+  const clearAction = event.target.closest('.filter-clear');
+  if (clearAction) {
+    const column = clearAction.dataset.column;
+    columnFilters[column] = [];
+    render();
+    return;
+  }
+
+  const clearAllAction = event.target.closest('.filter-clear-all');
+  if (clearAllAction) {
+    const column = clearAllAction.dataset.column;
+    columnFilters[column] = [];
+    render();
+    return;
+  }
+
+  const selectAllAction = event.target.closest('.filter-select-all');
+  if (selectAllAction) {
+    const column = selectAllAction.dataset.column;
+    const values = getColumnFilterValues(column).filter(value => value !== 'Semua');
+    columnFilters[column] = values;
+    render();
+    return;
+  }
+
+  const option = event.target.closest('.filter-option');
+  if (option) {
+    const column = option.dataset.column;
+    const value = option.dataset.value;
+    if (value === 'Semua') {
+      columnFilters[column] = [];
+    } else {
+      const current = columnFilters[column] || [];
+      const next = current.includes(value) ? current.filter(item => item !== value) : [...current, value];
+      columnFilters[column] = next;
+    }
+    render();
+    return;
+  }
+
+  if (!event.target.closest('.filter-menu') && !event.target.closest('.filter-trigger')) {
+    document.querySelectorAll('.filter-menu').forEach(item => item.classList.add('hidden'));
+  }
+});
 
 // Pilih kosan pada panel Status Kamar
 const pilihKamarKosan = $('pilihKamarKosan');

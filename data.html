@@ -66,13 +66,26 @@
         <h2>Data Penghuni</h2>
         <div class="top-actions">
           <input id="search" placeholder="Cari nama, kamar, atau kosan...">
+          <button id="btnResetFilter" class="secondary small-btn" type="button">Reset</button>
+          <button id="btnExportExcel" class="green small-btn" type="button">Export Excel</button>
           <button id="btnTambahPenghuni">＋ Tambah Penghuni</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Nama</th><th>No. HP</th><th>Kontak Darurat</th><th>Kosan</th><th>Kamar</th><th>Tgl Masuk</th><th>Durasi</th><th>Jatuh Tempo</th><th>Status</th><th>Aksi</th></tr>
+            <tr>
+              <th><div class="th-with-filter"><span>Nama</span><div class="filter-wrap"><button class="filter-trigger" data-column="nama" type="button" aria-label="Filter nama">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>No. HP</span><div class="filter-wrap"><button class="filter-trigger" data-column="noHp" type="button" aria-label="Filter nomor HP">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Kontak Darurat</span><div class="filter-wrap"><button class="filter-trigger" data-column="kontakNama" type="button" aria-label="Filter kontak darurat">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Kosan</span><div class="filter-wrap"><button class="filter-trigger" data-column="namaKosan" type="button" aria-label="Filter kosan">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Kamar</span><div class="filter-wrap"><button class="filter-trigger" data-column="kamar" type="button" aria-label="Filter kamar">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Tgl Masuk</span><div class="filter-wrap"><button class="filter-trigger" data-column="tanggalMasuk" type="button" aria-label="Filter tanggal masuk">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Durasi</span><div class="filter-wrap"><button class="filter-trigger" data-column="durasi" type="button" aria-label="Filter durasi">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Jatuh Tempo</span><div class="filter-wrap"><button class="filter-trigger" data-column="tanggalSelesai" type="button" aria-label="Filter jatuh tempo">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th><div class="th-with-filter"><span>Status</span><div class="filter-wrap"><button class="filter-trigger" data-column="status" type="button" aria-label="Filter status">⏷</button><div class="filter-menu hidden"></div></div></div></th>
+              <th>Aksi</th>
+            </tr>
           </thead>
           <tbody id="dataPenghuni"></tbody>
         </table>
@@ -127,6 +140,7 @@
   </div>
 
   <!-- Script terpisah -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
