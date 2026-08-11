@@ -19,37 +19,6 @@ const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID', { day: '
 
 const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
 
-// Hitung tanggal jatuh tempo bulanan: jatuh tempo jatuh pada tanggal yang sama dengan tanggal masuk.
-// Contoh: masuk 12 Juli -> jatuh tempo bulanan setiap tanggal 12.
-const hitungJatuhTempo = (tanggalMasuk, tanggalSelesai) => {
-  if (!tanggalMasuk) return '';
-  const mulai = new Date(tanggalMasuk + 'T00:00:00');
-  const dayMasuk = mulai.getDate();
-  const today = new Date();
-  const now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  // Kandidat jatuh tempo bulan ini (hari = tanggal masuk, menyesuaikan akhir bulan).
-  const lastDayThis = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  let t = new Date(today.getFullYear(), today.getMonth(), Math.min(dayMasuk, lastDayThis));
-
-  // Jika sudah lewat, ambil bulan berikutnya.
-  if (t < now) {
-    const lastDayNext = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate();
-    t = new Date(today.getFullYear(), today.getMonth() + 1, Math.min(dayMasuk, lastDayNext));
-  }
-
-  // Jangan melewati tanggal selesai sewa.
-  if (tanggalSelesai) {
-    const selesai = new Date(tanggalSelesai + 'T00:00:00');
-    if (t > selesai) t = selesai;
-  }
-
-  const y = t.getFullYear();
-  const m = String(t.getMonth() + 1).padStart(2, '0');
-  const d = String(t.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
 const setStatus = (el, teks, error = false) => { if (el) { el.textContent = teks; el.className = error ? 'error' : ''; } };
 
 const escapeHtml = teks => { const el = document.createElement('div'); el.textContent = teks || ''; return el.innerHTML; };
@@ -251,11 +220,11 @@ function renderCharts() {
   }
 }
 
-// Penghuni yang jatuh temponya <= 7 hari (sesuai kartu statistik).
+// Penghuni yang masa sewanya habis (jatuh tempo / habis kontrak) <= 7 hari.
 const akanJatuhTempo = p => {
-  const j = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
-  const hari = j ? selisihHari(j) : null;
-  return p.status === 'Aktif' && hari !== null && hari >= 0 && hari <= 7;
+  if (p.status !== 'Aktif' || !p.tanggalSelesai) return false;
+  const hari = selisihHari(p.tanggalSelesai);
+  return hari !== null && hari >= 0 && hari <= 7;
 };
 
 function render() {
@@ -265,12 +234,12 @@ function render() {
   if (dataPenghuni) {
     const kata = search ? search.value.toLowerCase() : '';
     let list = penghuni.filter(p => `${p.nama} ${p.kamar} ${p.namaKosan}`.toLowerCase().includes(kata));
-    if (filterTempo) list = list.filter(akanJatuhTempo);
+if (filterTempo) list = list.filter(akanJatuhTempo);
     dataPenghuni.innerHTML = list.length ? list.map(p => {
-      const jatuh = hitungJatuhTempo(p.tanggalMasuk, p.tanggalSelesai);
+      const jatuh = p.tanggalSelesai || '';
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
       const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
-return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+      return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
     }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
