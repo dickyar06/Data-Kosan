@@ -1,7 +1,7 @@
 const SHEET_NAME = 'Penghuni';
 const SHEET_KOSAN = 'Kosan';
 const SPREADSHEET_ID = '1_t-CmVldLgbTg5bpC_8RA5JXjAjd1rio5MWh5swTYkc';
-const DRIVE_FOLDER_ID = '1Wocn1TYYb-1UgMUGIyrLc6KQ6AvzJG8o';
+const DRIVE_FOLDER_ID = '1Br5b2mV_xPzJbTU2IHgIrudjemT2-gM-';
 const HEADERS = ['ID', 'Nama', 'No. HP', 'Kamar', 'Tanggal Masuk', 'Durasi (Bulan)', 'Tanggal Selesai', 'Status', 'Dibuat Pada', 'Kontak Darurat', 'No. HP Kontak Darurat', 'Nama Kosan', 'Foto Identitas'];
 const HEADERS_KOSAN = ['ID', 'Nama Kosan', 'Jumlah Kamar', 'Dibuat Pada'];
 
@@ -322,12 +322,27 @@ function cekKamarTerisi_(namaKosan, kamar, excludeId) {
 }
 
 function simpanFotoIdentitas_(fotoDataUrl) {
-  if (!fotoDataUrl || !String(fotoDataUrl).startsWith('data:image/')) {
+  if (!fotoDataUrl) {
+    return '';
+  }
+
+  if (String(fotoDataUrl).startsWith('http://') || String(fotoDataUrl).startsWith('https://')) {
+    return String(fotoDataUrl);
+  }
+
+  if (!String(fotoDataUrl).startsWith('data:image/')) {
     return '';
   }
 
   try {
-    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    let folder;
+    try {
+      folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    } catch (folderError) {
+      folder = DriveApp.getRootFolder();
+      Logger.log('Folder foto custom tidak valid, fallback ke root folder: ' + folderError.message);
+    }
+
     const match = String(fotoDataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
     if (!match) return '';
 
@@ -340,6 +355,7 @@ function simpanFotoIdentitas_(fotoDataUrl) {
     const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
     return url;
   } catch (error) {
+    Logger.log('Gagal simpan foto: ' + error.message);
     return '';
   }
 }
