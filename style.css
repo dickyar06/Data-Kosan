@@ -323,6 +323,24 @@ header p {
   margin-bottom: 8px;
 }
 
+.filter-search-wrap {
+  margin-bottom: 8px;
+}
+
+.filter-search {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+}
+
+.filter-search:focus {
+  border-color: var(--utama);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
 .filter-select-all,
 .filter-clear-all,
 .filter-clear {
@@ -349,6 +367,64 @@ header p {
 .filter-option.active {
   background: #dbeafe;
   color: #1d4ed8;
+}
+
+.foto-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+}
+
+.foto-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.foto-upload-field {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.foto-preview {
+  width: 100%;
+  max-width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  display: none;
+  background: #f8fafc;
+}
+
+.foto-preview.aktif {
+  display: block;
+}
+
+.modal-foto {
+  max-width: 420px;
+  text-align: center;
+}
+
+#fotoZoom {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.foto-zoom-nama {
+  margin-top: 12px;
+  font-weight: bold;
+  color: #334155;
 }
 
 main {

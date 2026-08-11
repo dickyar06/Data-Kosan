@@ -26,6 +26,13 @@ let chartKosan = null, chartStatus = null, chartBulan = null;
 
 const $ = id => document.getElementById(id);
 
+const FOTO_PLACEHOLDER = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect width="120" height="120" fill="#e2e8f0"/>
+  <circle cx="60" cy="42" r="22" fill="#94a3b8"/>
+  <path d="M24 98c7-17 25-26 36-26s29 9 36 26" fill="#94a3b8"/>
+</svg>`);
+
 const formatTanggal = value => value ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value + 'T00:00:00')) : '-';
 
 const selisihHari = value => Math.ceil((new Date(value + 'T00:00:00') - new Date()) / 86400000);
@@ -262,33 +269,44 @@ function getColumnFilterValues(column) {
   return [...values];
 }
 
+function renderFilterMenuForColumn(column, searchText = '') {
+  const button = document.querySelector(`.filter-trigger[data-column="${column}"]`);
+  const menu = button && button.parentElement.querySelector('.filter-menu');
+  if (!menu) return;
+
+  const selectedValues = columnFilters[column] || [];
+  const activeCount = selectedValues.length;
+  const isFiltered = activeCount > 0;
+  button.classList.toggle('active', isFiltered);
+  button.textContent = isFiltered ? `▼ ${activeCount}` : '⏷';
+
+  const values = getColumnFilterValues(column).filter(value => {
+    if (value === 'Semua') return true;
+    return String(value).toLowerCase().includes(searchText.toLowerCase());
+  });
+
+  const options = values.map(value => {
+    const label = value === 'Semua' ? 'Semua' : value;
+    const selected = value === 'Semua' ? activeCount === 0 : selectedValues.includes(value);
+    return `<button type="button" class="filter-option ${selected ? 'active' : ''}" data-column="${column}" data-value="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
+  }).join('');
+
+  const headerActions = `
+    <div class="filter-actions">
+      <button type="button" class="filter-select-all" data-column="${column}">Pilih semua</button>
+      <button type="button" class="filter-clear-all" data-column="${column}">Kosongkan</button>
+    </div>
+    <div class="filter-search-wrap">
+      <input type="text" class="filter-search" data-column="${column}" value="${escapeHtml(searchText)}" placeholder="Cari...">
+    </div>
+  `;
+
+  menu.innerHTML = `${headerActions}${options}`;
+}
+
 function renderColumnFilterMenus() {
   document.querySelectorAll('.filter-trigger').forEach(button => {
-    const column = button.dataset.column;
-    const menu = button.parentElement.querySelector('.filter-menu');
-    if (!menu) return;
-
-    const selectedValues = columnFilters[column] || [];
-    const activeCount = selectedValues.length;
-    const isFiltered = activeCount > 0;
-    button.classList.toggle('active', isFiltered);
-    button.textContent = isFiltered ? `▼ ${activeCount}` : '⏷';
-
-    const values = getColumnFilterValues(column);
-    const options = values.map(value => {
-      const label = value === 'Semua' ? 'Semua' : value;
-      const selected = value === 'Semua' ? activeCount === 0 : selectedValues.includes(value);
-      return `<button type="button" class="filter-option ${selected ? 'active' : ''}" data-column="${column}" data-value="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
-    }).join('');
-
-    const headerActions = `
-      <div class="filter-actions">
-        <button type="button" class="filter-select-all" data-column="${column}">Pilih semua</button>
-        <button type="button" class="filter-clear-all" data-column="${column}">Kosongkan</button>
-      </div>
-    `;
-
-    menu.innerHTML = `${headerActions}${options}`;
+    renderFilterMenuForColumn(button.dataset.column, '');
   });
 }
 
@@ -320,8 +338,9 @@ function render() {
       const jatuh = p.tanggalSelesai || '';
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
       const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
-      return `<tr><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
-    }).join('') : '<tr><td colspan="10" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
+      const fotoSrc = p.fotoIdentitas || FOTO_PLACEHOLDER;
+      return `<tr><td class="foto-cell"><img class="foto-thumb" src="${fotoSrc}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${escapeHtml(p.fotoIdentitas || FOTO_PLACEHOLDER)}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+    }).join('') : '<tr><td colspan="11" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
   // Kartu statistik (halaman dashboard)
@@ -351,6 +370,28 @@ async function loadData() {
   render();
 }
 
+function setFotoPreview(url, nama = '') {
+  const preview = $('fotoPreview');
+  const hidden = $('fotoIdentitasHidden');
+  const fotoInput = $('fotoIdentitasInput');
+
+  if (hidden) hidden.value = url || '';
+  if (preview) {
+    preview.src = url || FOTO_PLACEHOLDER;
+    preview.classList.toggle('aktif', Boolean(url));
+  }
+  if (fotoInput && !url) fotoInput.value = '';
+  if (nama && $('fotoZoomNama')) $('fotoZoomNama').textContent = nama;
+}
+
+function bukaFotoIdentitas(url, nama = '') {
+  const zoom = $('fotoZoom');
+  if (!zoom) return;
+  zoom.src = url || FOTO_PLACEHOLDER;
+  if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
+  bukaModal('modalFoto');
+}
+
 function edit(id) {
 const p = penghuni.find(x => x.id === id);
   if (!p) return;
@@ -368,6 +409,7 @@ const p = penghuni.find(x => x.id === id);
   f.status.value = p.status;
   f.kontakNama.value = p.kontakNama;
   f.kontakNoHp.value = p.kontakNoHp;
+  setFotoPreview(p.fotoIdentitas || '', p.nama);
   $('judulForm').textContent = 'Update Data Penghuni';
   $('btnSimpan').textContent = 'Simpan Perubahan';
   $('btnReset').textContent = 'Batal';
@@ -382,6 +424,7 @@ function batalEdit() {
   if (!f) return;
   f.reset();
   f.durasi.value = 12;
+  setFotoPreview('', '');
   $('judulForm').textContent = 'Tambah Penghuni';
   $('btnSimpan').textContent = 'Simpan Data';
   $('btnReset').textContent = 'Bersihkan';
@@ -448,7 +491,9 @@ document.querySelectorAll('.modal-overlay').forEach(ov => {
 const formPenghuni = $('formPenghuni');
 if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
   e.preventDefault();
+  const fotoHidden = $('fotoIdentitasHidden');
   const data = Object.fromEntries(new FormData(e.target));
+  data.fotoIdentitas = fotoHidden ? fotoHidden.value : '';
   const mode = editId ? 'update' : 'add';
   if (editId) data.id = editId;
   data.action = mode;
@@ -457,7 +502,7 @@ if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
     await kirimData(data);
     await loadData();
     if (mode === 'update') { batalEdit(); setStatus($('status'), 'Data berhasil diperbarui.'); }
-    else { e.target.reset(); e.target.durasi.value = 12; setStatus($('status'), 'Data berhasil tersimpan.'); }
+    else { e.target.reset(); e.target.durasi.value = 12; setFotoPreview('', ''); setStatus($('status'), 'Data berhasil tersimpan.'); }
     tutupModal('modalPenghuni');
   }
   catch (error) { setStatus($('status'), 'Gagal: ' + error.message, true); }
@@ -465,6 +510,22 @@ if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
 
 const btnReset = $('btnReset');
 if (btnReset) btnReset.addEventListener('click', batalEdit);
+
+const fotoInput = $('fotoIdentitasInput');
+if (fotoInput) {
+  fotoInput.addEventListener('change', () => {
+    const file = fotoInput.files && fotoInput.files[0];
+    if (!file) {
+      setFotoPreview('', '');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFotoPreview(String(reader.result || ''), '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // Saat kosan dipilih pada form penghuni, isi ulang dropdown kamar
 const formPenghuni2 = $('formPenghuni');
@@ -553,6 +614,12 @@ function openFilterMenu(trigger) {
 }
 
 document.addEventListener('click', event => {
+  const fotoThumb = event.target.closest('.foto-thumb');
+  if (fotoThumb) {
+    bukaFotoIdentitas(fotoThumb.dataset.image || FOTO_PLACEHOLDER, fotoThumb.dataset.nama || 'Foto identitas');
+    return;
+  }
+
   const trigger = event.target.closest('.filter-trigger');
   if (trigger) {
     const menu = trigger.parentElement.querySelector('.filter-menu');
@@ -562,6 +629,12 @@ document.addEventListener('click', event => {
     } else {
       menu.classList.add('hidden');
     }
+    return;
+  }
+
+  const filterSearch = event.target.closest('.filter-search');
+  if (filterSearch) {
+    filterSearch.focus();
     return;
   }
 
@@ -608,6 +681,12 @@ document.addEventListener('click', event => {
   if (!event.target.closest('.filter-menu') && !event.target.closest('.filter-trigger')) {
     document.querySelectorAll('.filter-menu').forEach(item => item.classList.add('hidden'));
   }
+});
+
+document.addEventListener('input', event => {
+  const searchInput = event.target.closest('.filter-search');
+  if (!searchInput) return;
+  renderFilterMenuForColumn(searchInput.dataset.column, searchInput.value);
 });
 
 // Pilih kosan pada panel Status Kamar

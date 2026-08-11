@@ -1,7 +1,8 @@
 const SHEET_NAME = 'Penghuni';
 const SHEET_KOSAN = 'Kosan';
 const SPREADSHEET_ID = '1_t-CmVldLgbTg5bpC_8RA5JXjAjd1rio5MWh5swTYkc';
-const HEADERS = ['ID', 'Nama', 'No. HP', 'Kamar', 'Tanggal Masuk', 'Durasi (Bulan)', 'Tanggal Selesai', 'Status', 'Dibuat Pada', 'Kontak Darurat', 'No. HP Kontak Darurat', 'Nama Kosan'];
+const DRIVE_FOLDER_ID = '1Wocn1TYYb-1UgMUGIyrLc6KQ6AvzJG8o';
+const HEADERS = ['ID', 'Nama', 'No. HP', 'Kamar', 'Tanggal Masuk', 'Durasi (Bulan)', 'Tanggal Selesai', 'Status', 'Dibuat Pada', 'Kontak Darurat', 'No. HP Kontak Darurat', 'Nama Kosan', 'Foto Identitas'];
 const HEADERS_KOSAN = ['ID', 'Nama Kosan', 'Jumlah Kamar', 'Dibuat Pada'];
 
 /* Membaca data. URL /exec maupun /exec?action=... akan mengembalikan data. */
@@ -284,7 +285,8 @@ function getPenghuni_() {
       status: String(row[7] || 'Aktif'),
       kontakNama: String(row[9] || ''),
       kontakNoHp: String(row[10] || ''),
-      namaKosan: String(row[11] || '')
+      namaKosan: String(row[11] || ''),
+      fotoIdentitas: String(row[12] || '')
     }))
     .filter(data => data.id)
     .reverse();
@@ -317,6 +319,29 @@ function cekKamarTerisi_(namaKosan, kamar, excludeId) {
 
     return kosan === namaKosanTujuan && noKamar === kamarTujuan;
   });
+}
+
+function simpanFotoIdentitas_(fotoDataUrl) {
+  if (!fotoDataUrl || !String(fotoDataUrl).startsWith('data:image/')) {
+    return '';
+  }
+
+  try {
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    const match = String(fotoDataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
+    if (!match) return '';
+
+    const mimeType = match[1];
+    const base64 = match[2];
+    const extension = mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'jpg';
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, `foto-identitas-${Utilities.getUuid()}.${extension}`);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
+    return url;
+  } catch (error) {
+    return '';
+  }
 }
 
 function tambahPenghuni_(data) {
@@ -353,6 +378,7 @@ function tambahPenghuni_(data) {
     }
 
     const sheet = getSheet_();
+    const fotoUrl = simpanFotoIdentitas_(data.fotoIdentitas);
 
     sheet.appendRow([
       Utilities.getUuid(),
@@ -366,7 +392,8 @@ function tambahPenghuni_(data) {
       new Date(),
       String(data.kontakNama).trim(),
       String(data.kontakNoHp).trim(),
-      String(data.namaKosan).trim()
+      String(data.namaKosan).trim(),
+      fotoUrl
     ]);
 
     return {
@@ -422,6 +449,7 @@ function updatePenghuni_(data) {
 
     // Update baris (baris sheet = baris+2 karena header di baris 1)
     const rowIndex = baris + 2;
+    const fotoUrl = simpanFotoIdentitas_(data.fotoIdentitas) || String(sheet.getRange(rowIndex, 13).getValue() || '');
     sheet.getRange(rowIndex, 2).setValue(String(data.nama).trim());
     sheet.getRange(rowIndex, 3).setValue(String(data.noHp).trim());
     sheet.getRange(rowIndex, 4).setValue(String(data.kamar).trim());
@@ -432,6 +460,7 @@ function updatePenghuni_(data) {
     sheet.getRange(rowIndex, 10).setValue(String(data.kontakNama).trim());
     sheet.getRange(rowIndex, 11).setValue(String(data.kontakNoHp).trim());
     sheet.getRange(rowIndex, 12).setValue(String(data.namaKosan).trim());
+    sheet.getRange(rowIndex, 13).setValue(fotoUrl);
 
     return {
       success: true,

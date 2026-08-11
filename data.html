@@ -75,6 +75,7 @@
         <table>
           <thead>
             <tr>
+              <th><div class="th-with-filter"><span>Foto</span></div></th>
               <th><div class="th-with-filter"><span>Nama</span><div class="filter-wrap"><button class="filter-trigger" data-column="nama" type="button" aria-label="Filter nama">⏷</button><div class="filter-menu hidden"></div></div></div></th>
               <th><div class="th-with-filter"><span>No. HP</span><div class="filter-wrap"><button class="filter-trigger" data-column="noHp" type="button" aria-label="Filter nomor HP">⏷</button><div class="filter-menu hidden"></div></div></div></th>
               <th><div class="th-with-filter"><span>Kontak Darurat</span><div class="filter-wrap"><button class="filter-trigger" data-column="kontakNama" type="button" aria-label="Filter kontak darurat">⏷</button><div class="filter-menu hidden"></div></div></div></th>
@@ -130,12 +131,29 @@
         <label>Status<select name="status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></label>
         <label>Nama kontak darurat<input name="kontakNama" required placeholder="Contoh: Siti Aminah"></label>
         <label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
+        <div class="foto-upload-field">
+          <label>Foto identitas</label>
+          <input type="file" id="fotoIdentitasInput" accept="image/*">
+          <input type="hidden" id="fotoIdentitasHidden" name="fotoIdentitas" value="">
+          <img id="fotoPreview" class="foto-preview" alt="Preview foto identitas" src="">
+        </div>
         <div class="actions">
           <button type="submit" id="btnSimpan">Simpan Data</button>
           <button type="reset" class="secondary" id="btnReset">Bersihkan</button>
         </div>
       </form>
       <div id="status"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalFoto">
+    <div class="modal modal-foto">
+      <div class="modal-header">
+        <h2>Foto Identitas</h2>
+        <button class="modal-close" data-close="modalFoto">✕</button>
+      </div>
+      <img id="fotoZoom" src="" alt="Foto identitas" />
+      <div id="fotoZoomNama" class="foto-zoom-nama"></div>
     </div>
   </div>
 
