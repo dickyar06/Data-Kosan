@@ -379,8 +379,29 @@ function simpanFotoIdentitas_(fotoDataUrl) {
     Logger.log('[FOTO STEP 9] File created: ' + file.getId());
 
     Logger.log('[FOTO STEP 10] Set sharing...');
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    Logger.log('[FOTO STEP 10] Sharing OK');
+    try {
+      file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+      Logger.log('[FOTO STEP 10] Sharing OK via setSharing dengan ANYONE');
+    } catch (sharingError) {
+      Logger.log('[FOTO STEP 10] setSharing gagal, coba Drive API workaround: ' + sharingError.message);
+      try {
+        // Workaround: ganti owner ke "anyone" via Drive API advanced
+        const fileId = file.getId();
+        const response = UrlFetchApp.fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
+          {
+            method: 'post',
+            headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+            payload: JSON.stringify({ role: 'reader', type: 'anyone' }),
+            muteHttpExceptions: true,
+            contentType: 'application/json'
+          }
+        );
+        Logger.log('[FOTO STEP 10] Sharing via Drive API: ' + response.getResponseCode());
+      } catch (apiError) {
+        Logger.log('[FOTO STEP 10] Sharing via API juga gagal, lanjut ke URL: ' + apiError.message);
+      }
+    }
 
     const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
     Logger.log('[FOTO FINAL] Foto URL berhasil: ' + url);
