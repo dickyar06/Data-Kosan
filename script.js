@@ -514,9 +514,11 @@ if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
   const mode = editId ? 'update' : 'add';
   if (editId) data.id = editId;
   data.action = mode;
+  console.log('DEBUG: Mengirim form dengan fotoIdentitas:', data.fotoIdentitas ? '(ada, panjang: ' + data.fotoIdentitas.length + ' karakter)' : '(KOSONG)');
   try {
     setStatus($('status'), mode === 'update' ? 'Menyimpan perubahan ke Google Sheet...' : 'Menyimpan ke Google Sheet...');
-    await kirimData(data);
+    const result = await kirimData(data);
+    console.log('DEBUG: Response dari server:', result);
     await loadData();
     if (mode === 'update') { batalEdit(); setStatus($('status'), 'Data berhasil diperbarui.'); }
     else { e.target.reset(); e.target.durasi.value = 12; setFotoPreview('', ''); setStatus($('status'), 'Data berhasil tersimpan.'); }

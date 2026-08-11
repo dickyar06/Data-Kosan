@@ -323,48 +323,70 @@ function cekKamarTerisi_(namaKosan, kamar, excludeId) {
 
 function simpanFotoIdentitas_(fotoDataUrl) {
   if (!fotoDataUrl) {
-    Logger.log('Foto tidak disimpan: data URL kosong.');
+    Logger.log('[FOTO STEP 1] GAGAL: data URL kosong');
     return '';
   }
 
   const urlString = String(fotoDataUrl).trim();
+  Logger.log('[FOTO STEP 1] Data URL length: ' + urlString.length + ' chars, prefix: ' + urlString.substring(0, 30));
 
+  // Jika sudah URL (dari edit), return langsung
   if (urlString.startsWith('http://') || urlString.startsWith('https://')) {
+    Logger.log('[FOTO STEP 2] Sudah URL, return langsung');
     return urlString;
   }
 
   if (!urlString.startsWith('data:image/')) {
-    Logger.log('Foto tidak disimpan: format bukan data URL gambar.');
+    Logger.log('[FOTO STEP 2] GAGAL: format bukan data:image/, prefix: ' + urlString.substring(0, 50));
     return '';
   }
+  Logger.log('[FOTO STEP 2] Format OK: data:image/ terdeteksi');
 
   try {
     let folder;
     try {
       folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-      Logger.log('Folder foto ditemukan: ' + DRIVE_FOLDER_ID);
+      Logger.log('[FOTO STEP 3] Folder ditemukan: ' + DRIVE_FOLDER_ID);
     } catch (folderError) {
       folder = DriveApp.getRootFolder();
-      Logger.log('Folder foto custom tidak valid, fallback ke root folder: ' + folderError.message);
+      Logger.log('[FOTO STEP 3] Folder custom GAGAL, fallback root: ' + folderError.message);
     }
 
+    Logger.log('[FOTO STEP 4] Cek regex match untuk base64...');
     const match = urlString.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
     if (!match) {
-      Logger.log('Foto tidak disimpan: format base64 tidak sesuai pola.');
+      Logger.log('[FOTO STEP 4] GAGAL regex: prefix=' + urlString.substring(0, 80));
       return '';
     }
 
     const mimeType = match[1];
     const base64 = match[2];
+    Logger.log('[FOTO STEP 5] Regex OK - MIME: ' + mimeType + ', base64 length: ' + base64.length);
+
     const extension = mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'jpg';
-    const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, `foto-identitas-${Utilities.getUuid()}.${extension}`);
+    Logger.log('[FOTO STEP 6] Extension: ' + extension);
+
+    Logger.log('[FOTO STEP 7] Decode base64...');
+    const decodedBlob = Utilities.base64Decode(base64);
+    Logger.log('[FOTO STEP 7] Decode OK, blob size: ' + decodedBlob.length);
+
+    const fileName = `foto-identitas-${Utilities.getUuid()}.${extension}`;
+    const blob = Utilities.newBlob(decodedBlob, mimeType, fileName);
+    Logger.log('[FOTO STEP 8] Blob created: ' + fileName);
+
+    Logger.log('[FOTO STEP 9] Create file di Drive...');
     const file = folder.createFile(blob);
+    Logger.log('[FOTO STEP 9] File created: ' + file.getId());
+
+    Logger.log('[FOTO STEP 10] Set sharing...');
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    Logger.log('[FOTO STEP 10] Sharing OK');
+
     const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
-    Logger.log('Foto berhasil dibuat: ' + url);
+    Logger.log('[FOTO FINAL] Foto URL berhasil: ' + url);
     return url;
   } catch (error) {
-    Logger.log('Gagal simpan foto: ' + error.message);
+    Logger.log('[FOTO ERROR] ' + error.message + ' | Stack: ' + error.stack);
     return '';
   }
 }
@@ -405,8 +427,9 @@ function tambahPenghuni_(data) {
     }
 
     const sheet = getSheet_();
+    Logger.log('fotoIdentitas diterima: ' + (data.fotoIdentitas ? 'ada (' + data.fotoIdentitas.substring(0, 50) + '...)' : 'TIDAK ADA/KOSONG'));
     const fotoUrl = simpanFotoIdentitas_(data.fotoIdentitas);
-    Logger.log('Foto URL hasil simpan: ' + (fotoUrl || '[kosong]'));
+    Logger.log('Foto URL hasil simpan: ' + (fotoUrl || '[KOSONG - PERHATIAN!]'));
 
     const rowData = [
       Utilities.getUuid(),
@@ -423,12 +446,12 @@ function tambahPenghuni_(data) {
       String(data.namaKosan).trim(),
       fotoUrl
     ];
-    Logger.log('Menyimpan row dengan foto URL di kolom 13: ' + fotoUrl);
+    Logger.log('Menyimpan row dengan foto URL di kolom 13 (index 12): ' + (fotoUrl || '[KOSONG]'));
     sheet.appendRow(rowData);
 
     return {
       success: true,
-      message: 'Data berhasil disimpan.'
+      message: 'Data berhasil disimpan. Foto URL: ' + (fotoUrl || '[tidak ada/gagal upload]')
     };
   } finally {
     lock.releaseLock();
