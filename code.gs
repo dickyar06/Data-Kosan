@@ -370,6 +370,8 @@ function simpanFotoIdentitas_(fotoDataUrl) {
 }
 
 function tambahPenghuni_(data) {
+  Logger.log('tambahPenghuni_ dipanggil dengan data: ' + JSON.stringify(data).substring(0, 200));
+  
   const wajib = ['nama', 'noHp', 'kamar', 'tanggalMasuk', 'durasi', 'kontakNama', 'kontakNoHp', 'namaKosan'];
 
   wajib.forEach(kolom => {
@@ -404,8 +406,9 @@ function tambahPenghuni_(data) {
 
     const sheet = getSheet_();
     const fotoUrl = simpanFotoIdentitas_(data.fotoIdentitas);
+    Logger.log('Foto URL hasil simpan: ' + (fotoUrl || '[kosong]'));
 
-    sheet.appendRow([
+    const rowData = [
       Utilities.getUuid(),
       String(data.nama).trim(),
       String(data.noHp).trim(),
@@ -419,7 +422,9 @@ function tambahPenghuni_(data) {
       String(data.kontakNoHp).trim(),
       String(data.namaKosan).trim(),
       fotoUrl
-    ]);
+    ];
+    Logger.log('Menyimpan row dengan foto URL di kolom 13: ' + fotoUrl);
+    sheet.appendRow(rowData);
 
     return {
       success: true,
