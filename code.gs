@@ -449,7 +449,9 @@ function updatePenghuni_(data) {
 
     // Update baris (baris sheet = baris+2 karena header di baris 1)
     const rowIndex = baris + 2;
-    const fotoUrl = simpanFotoIdentitas_(data.fotoIdentitas) || String(sheet.getRange(rowIndex, 13).getValue() || '');
+    const fotoLama = String(sheet.getRange(rowIndex, 13).getValue() || '');
+    const hapusFoto = data.hapusFoto === '1' || data.hapusFoto === 1 || data.hapusFoto === true;
+    const fotoUrl = hapusFoto ? '' : (simpanFotoIdentitas_(data.fotoIdentitas) || fotoLama);
     sheet.getRange(rowIndex, 2).setValue(String(data.nama).trim());
     sheet.getRange(rowIndex, 3).setValue(String(data.noHp).trim());
     sheet.getRange(rowIndex, 4).setValue(String(data.kamar).trim());

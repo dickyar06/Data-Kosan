@@ -392,6 +392,18 @@ header p {
   gap: 8px;
 }
 
+.foto-upload-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-hapus-foto {
+  white-space: nowrap;
+  padding: 10px 12px;
+}
+
 .foto-preview {
   width: 100%;
   max-width: 160px;
@@ -410,6 +422,29 @@ header p {
 .modal-foto {
   max-width: 420px;
   text-align: center;
+}
+
+.modal-foto-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.download-foto-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: var(--utama);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.download-foto-btn:hover {
+  background: #1d4ed8;
 }
 
 #fotoZoom {

@@ -133,8 +133,12 @@
         <label>No. HP kontak darurat<input name="kontakNoHp" required type="tel" placeholder="08xxxxxxxxxx"></label>
         <div class="foto-upload-field">
           <label>Foto identitas</label>
-          <input type="file" id="fotoIdentitasInput" accept="image/*">
+          <div class="foto-upload-actions">
+            <input type="file" id="fotoIdentitasInput" accept="image/*">
+            <button type="button" class="secondary btn-hapus-foto" id="btnHapusFoto">Hapus foto</button>
+          </div>
           <input type="hidden" id="fotoIdentitasHidden" name="fotoIdentitas" value="">
+          <input type="hidden" id="hapusFotoHidden" name="hapusFoto" value="0">
           <img id="fotoPreview" class="foto-preview" alt="Preview foto identitas" src="">
         </div>
         <div class="actions">
@@ -154,6 +158,9 @@
       </div>
       <img id="fotoZoom" src="" alt="Foto identitas" />
       <div id="fotoZoomNama" class="foto-zoom-nama"></div>
+      <div class="modal-foto-actions">
+        <a id="fotoDownloadBtn" class="download-foto-btn" href="#" target="_blank" rel="noopener noreferrer">Download Foto</a>
+      </div>
     </div>
   </div>
 

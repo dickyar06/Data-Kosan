@@ -374,10 +374,12 @@ function setFotoPreview(url, nama = '') {
   const preview = $('fotoPreview');
   const hidden = $('fotoIdentitasHidden');
   const fotoInput = $('fotoIdentitasInput');
+  const hapusFoto = $('hapusFotoHidden');
 
   if (hidden) hidden.value = url || '';
+  if (hapusFoto) hapusFoto.value = '0';
   if (preview) {
-    preview.src = url || FOTO_PLACEHOLDER;
+    preview.src = url || '';
     preview.classList.toggle('aktif', Boolean(url));
   }
   if (fotoInput && !url) fotoInput.value = '';
@@ -386,9 +388,18 @@ function setFotoPreview(url, nama = '') {
 
 function bukaFotoIdentitas(url, nama = '') {
   const zoom = $('fotoZoom');
+  const downloadBtn = $('fotoDownloadBtn');
   if (!zoom) return;
-  zoom.src = url || FOTO_PLACEHOLDER;
+
+  const imageUrl = url || FOTO_PLACEHOLDER;
+  zoom.src = imageUrl;
   if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
+
+  if (downloadBtn) {
+    downloadBtn.href = imageUrl === FOTO_PLACEHOLDER ? '#' : imageUrl;
+    downloadBtn.style.display = imageUrl === FOTO_PLACEHOLDER ? 'none' : 'inline-flex';
+  }
+
   bukaModal('modalFoto');
 }
 
@@ -409,6 +420,8 @@ const p = penghuni.find(x => x.id === id);
   f.status.value = p.status;
   f.kontakNama.value = p.kontakNama;
   f.kontakNoHp.value = p.kontakNoHp;
+  const hapusFoto = $('hapusFotoHidden');
+  if (hapusFoto) hapusFoto.value = '0';
   setFotoPreview(p.fotoIdentitas || '', p.nama);
   $('judulForm').textContent = 'Update Data Penghuni';
   $('btnSimpan').textContent = 'Simpan Perubahan';
@@ -424,6 +437,8 @@ function batalEdit() {
   if (!f) return;
   f.reset();
   f.durasi.value = 12;
+  const hapusFoto = $('hapusFotoHidden');
+  if (hapusFoto) hapusFoto.value = '0';
   setFotoPreview('', '');
   $('judulForm').textContent = 'Tambah Penghuni';
   $('btnSimpan').textContent = 'Simpan Data';
@@ -492,8 +507,10 @@ const formPenghuni = $('formPenghuni');
 if (formPenghuni) formPenghuni.addEventListener('submit', async e => {
   e.preventDefault();
   const fotoHidden = $('fotoIdentitasHidden');
+  const hapusFoto = $('hapusFotoHidden');
   const data = Object.fromEntries(new FormData(e.target));
   data.fotoIdentitas = fotoHidden ? fotoHidden.value : '';
+  data.hapusFoto = hapusFoto ? hapusFoto.value : '0';
   const mode = editId ? 'update' : 'add';
   if (editId) data.id = editId;
   data.action = mode;
@@ -521,9 +538,20 @@ if (fotoInput) {
     }
     const reader = new FileReader();
     reader.onload = () => {
+      const hapusFoto = $('hapusFotoHidden');
+      if (hapusFoto) hapusFoto.value = '0';
       setFotoPreview(String(reader.result || ''), '');
     };
     reader.readAsDataURL(file);
+  });
+}
+
+const btnHapusFoto = $('btnHapusFoto');
+if (btnHapusFoto) {
+  btnHapusFoto.addEventListener('click', () => {
+    const hapusFoto = $('hapusFotoHidden');
+    if (hapusFoto) hapusFoto.value = '1';
+    setFotoPreview('', '');
   });
 }
 
