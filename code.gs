@@ -323,14 +323,18 @@ function cekKamarTerisi_(namaKosan, kamar, excludeId) {
 
 function simpanFotoIdentitas_(fotoDataUrl) {
   if (!fotoDataUrl) {
+    Logger.log('Foto tidak disimpan: data URL kosong.');
     return '';
   }
 
-  if (String(fotoDataUrl).startsWith('http://') || String(fotoDataUrl).startsWith('https://')) {
-    return String(fotoDataUrl);
+  const urlString = String(fotoDataUrl).trim();
+
+  if (urlString.startsWith('http://') || urlString.startsWith('https://')) {
+    return urlString;
   }
 
-  if (!String(fotoDataUrl).startsWith('data:image/')) {
+  if (!urlString.startsWith('data:image/')) {
+    Logger.log('Foto tidak disimpan: format bukan data URL gambar.');
     return '';
   }
 
@@ -338,21 +342,26 @@ function simpanFotoIdentitas_(fotoDataUrl) {
     let folder;
     try {
       folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      Logger.log('Folder foto ditemukan: ' + DRIVE_FOLDER_ID);
     } catch (folderError) {
       folder = DriveApp.getRootFolder();
       Logger.log('Folder foto custom tidak valid, fallback ke root folder: ' + folderError.message);
     }
 
-    const match = String(fotoDataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
-    if (!match) return '';
+    const match = urlString.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
+    if (!match) {
+      Logger.log('Foto tidak disimpan: format base64 tidak sesuai pola.');
+      return '';
+    }
 
     const mimeType = match[1];
     const base64 = match[2];
-    const extension = mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'jpg';
+    const extension = mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'jpg';
     const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, `foto-identitas-${Utilities.getUuid()}.${extension}`);
     const file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
+    Logger.log('Foto berhasil dibuat: ' + url);
     return url;
   } catch (error) {
     Logger.log('Gagal simpan foto: ' + error.message);
@@ -557,4 +566,9 @@ function jsonResponse_(data, callback) {
   return ContentService
     .createTextOutput(hasil)
     .setMimeType(ContentService.MimeType.JSON);
+}
+function testUploadFoto() {
+  const sample = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAF';
+  const result = simpanFotoIdentitas_(sample);
+  Logger.log(result);
 }
