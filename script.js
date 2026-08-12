@@ -338,8 +338,10 @@ function render() {
       const jatuh = p.tanggalSelesai || '';
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
       const mendekati = p.status === 'Aktif' && hariJatuh !== null && hariJatuh >= 0 && hariJatuh <= 7;
-      const fotoSrc = p.fotoIdentitas || FOTO_PLACEHOLDER;
-      return `<tr><td class="foto-cell"><img class="foto-thumb" src="${fotoSrc}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${escapeHtml(p.fotoIdentitas || FOTO_PLACEHOLDER)}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+      const fotoUrl = p.fotoIdentitas ? normalizeImageUrl(p.fotoIdentitas) : FOTO_PLACEHOLDER;
+      const fotoThumb = p.fotoIdentitas ? normalizeImageUrl(p.fotoIdentitas, true) : FOTO_PLACEHOLDER;
+      const fotoData = encodeURIComponent(fotoUrl);
+      return `<tr><td class="foto-cell"><img class="foto-thumb" src="${escapeHtml(fotoThumb)}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${fotoData}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
     }).join('') : '<tr><td colspan="11" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
@@ -370,6 +372,42 @@ async function loadData() {
   render();
 }
 
+function normalizeImageUrl(url, isThumb = false) {
+  if (!url) return FOTO_PLACEHOLDER;
+  let normalized = url;
+  try {
+    normalized = decodeURIComponent(url);
+  } catch (err) {
+    normalized = url;
+  }
+
+  let id = '';
+  if (normalized.startsWith('data:image/')) {
+    return normalized;
+  }
+
+  const driveViewMatch = normalized.match(/([?&])id=([a-zA-Z0-9_-]+)/);
+  if (driveViewMatch) {
+    id = driveViewMatch[2];
+  } else {
+    const fileMatch = normalized.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileMatch) id = fileMatch[1];
+  }
+
+  if (id) {
+    if (isThumb) {
+      return `https://drive.google.com/thumbnail?authuser=0&sz=w160&id=${id}`;
+    }
+    return `https://drive.google.com/uc?export=view&id=${id}`;
+  }
+
+  if (normalized.startsWith('https://drive.google.com/uc?export=download&id=')) {
+    normalized = normalized.replace('uc?export=download&id=', 'uc?export=view&id=');
+  }
+
+  return normalized;
+}
+
 function setFotoPreview(url, nama = '') {
   const preview = $('fotoPreview');
   const hidden = $('fotoIdentitasHidden');
@@ -391,7 +429,7 @@ function bukaFotoIdentitas(url, nama = '') {
   const downloadBtn = $('fotoDownloadBtn');
   if (!zoom) return;
 
-  const imageUrl = url || FOTO_PLACEHOLDER;
+  const imageUrl = normalizeImageUrl(url || FOTO_PLACEHOLDER);
   zoom.src = imageUrl;
   if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
 
@@ -646,7 +684,9 @@ function openFilterMenu(trigger) {
 document.addEventListener('click', event => {
   const fotoThumb = event.target.closest('.foto-thumb');
   if (fotoThumb) {
-    bukaFotoIdentitas(fotoThumb.dataset.image || FOTO_PLACEHOLDER, fotoThumb.dataset.nama || 'Foto identitas');
+    const imageValue = fotoThumb.dataset.image || encodeURIComponent(FOTO_PLACEHOLDER);
+    const imageUrl = decodeURIComponent(imageValue);
+    bukaFotoIdentitas(imageUrl, fotoThumb.dataset.nama || 'Foto identitas');
     return;
   }
 
