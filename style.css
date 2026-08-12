@@ -247,7 +247,8 @@ header p {
 }
 
 .small-btn {
-  padding: 10px 12px;
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 .th-with-filter {
@@ -374,6 +375,29 @@ header p {
   align-items: center;
   justify-content: center;
   min-width: 80px;
+}
+
+.select-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.select-item {
+  width: 16px;
+  height: 16px;
+}
+
+.batch-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.selection-info {
+  color: #334155;
+  font-weight: 600;
 }
 
 .foto-thumb {
@@ -580,13 +604,49 @@ button {
 .table-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.table-top .top-left,
+.table-top .top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.table-top .top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.top-right.hidden {
+  display: none;
 }
 
 #search {
-  max-width: 290px;
+  width: minmax(220px, 320px);
+  max-width: 320px;
+}
+
+.selection-info {
+  color: #334155;
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.row-selected {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.select-cell input {
+  width: 18px;
+  height: 18px;
 }
 
 .table-wrap {

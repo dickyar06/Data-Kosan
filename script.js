@@ -23,6 +23,7 @@ let columnFilters = {
 let editId = null;
 let editKosanId = null;
 let chartKosan = null, chartStatus = null, chartBulan = null;
+let selectedPenghuniIds = new Set();
 
 const $ = id => document.getElementById(id);
 
@@ -341,7 +342,8 @@ function render() {
       const fotoUrl = p.fotoIdentitas ? normalizeImageUrl(p.fotoIdentitas) : FOTO_PLACEHOLDER;
       const fotoThumb = p.fotoIdentitas ? normalizeImageUrl(p.fotoIdentitas, true) : FOTO_PLACEHOLDER;
       const fotoData = encodeURIComponent(fotoUrl);
-      return `<tr><td class="foto-cell"><img class="foto-thumb" src="${escapeHtml(fotoThumb)}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${fotoData}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="update" onclick="edit('${p.id}')">Update</button><button class="delete" onclick="hapus('${p.id}')">Hapus</button></td></tr>`;
+      const isSelected = selectedPenghuniIds.has(p.id);
+      return `<tr class="${isSelected ? 'row-selected' : ''}"><td class="select-cell"><input type="checkbox" class="select-item" data-id="${escapeHtml(p.id)}" ${isSelected ? 'checked' : ''}></td><td class="foto-cell"><img class="foto-thumb" src="${escapeHtml(fotoThumb)}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${fotoData}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td></tr>`;
     }).join('') : '<tr><td colspan="11" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
@@ -358,9 +360,33 @@ function render() {
   const kartu = $('kartuTempo');
   if (kartu) kartu.classList.toggle('aktif-kartu', filterTempo);
 
+  updateBatchActions(list);
   renderKosan();
   renderStatusKamar();
   renderCharts();
+}
+
+function updateBatchActions(visibleList = []) {
+  const selectedCountElement = $('selectedCount');
+  const clearBtn = $('btnClearSelection');
+  const updateBtn = $('btnUpdateSelected');
+  const deleteBtn = $('btnDeleteSelected');
+  const selectAll = $('selectAllPenghuni');
+  const selectedCount = selectedPenghuniIds.size;
+
+  if (selectedCountElement) selectedCountElement.textContent = `${selectedCount} terpilih`;
+  if (clearBtn) clearBtn.disabled = selectedCount === 0;
+  if (updateBtn) updateBtn.disabled = selectedCount !== 1;
+  if (deleteBtn) deleteBtn.disabled = selectedCount === 0;
+  const topRight = $('topRightActions');
+  if (topRight) topRight.classList.toggle('hidden', selectedCount === 0);
+
+  if (selectAll) {
+    const visibleIds = visibleList.map(p => p.id);
+    const visibleSelected = visibleIds.filter(id => selectedPenghuniIds.has(id));
+    selectAll.checked = visibleIds.length > 0 && visibleSelected.length === visibleIds.length;
+    selectAll.indeterminate = visibleSelected.length > 0 && visibleSelected.length < visibleIds.length;
+  }
 }
 
 async function loadData() {
@@ -633,6 +659,29 @@ if (btnResetFilter) btnResetFilter.addEventListener('click', () => {
   render();
 });
 
+const btnUpdateSelected = $('btnUpdateSelected');
+if (btnUpdateSelected) btnUpdateSelected.addEventListener('click', () => {
+  if (selectedPenghuniIds.size !== 1) return;
+  edit(Array.from(selectedPenghuniIds)[0]);
+});
+
+const btnDeleteSelected = $('btnDeleteSelected');
+if (btnDeleteSelected) btnDeleteSelected.addEventListener('click', async () => {
+  const ids = Array.from(selectedPenghuniIds);
+  if (!ids.length) return;
+  if (!confirm(`Hapus ${ids.length} penghuni terpilih?`)) return;
+  await deleteMultiple(ids);
+});
+
+const btnClearSelection = $('btnClearSelection');
+if (btnClearSelection) btnClearSelection.addEventListener('click', () => {
+  selectedPenghuniIds.clear();
+  document.querySelectorAll('.select-item').forEach(item => item.checked = false);
+  const selectAll = $('selectAllPenghuni');
+  if (selectAll) selectAll.checked = false;
+  updateBatchActions(getFilteredPenghuniList());
+});
+
 const btnExportExcel = $('btnExportExcel');
 if (btnExportExcel) btnExportExcel.addEventListener('click', () => {
   if (!window.XLSX) {
@@ -687,6 +736,57 @@ document.addEventListener('click', event => {
     const imageValue = fotoThumb.dataset.image || encodeURIComponent(FOTO_PLACEHOLDER);
     const imageUrl = decodeURIComponent(imageValue);
     bukaFotoIdentitas(imageUrl, fotoThumb.dataset.nama || 'Foto identitas');
+    return;
+  }
+
+  const selectItem = event.target.closest('.select-item');
+  if (selectItem) {
+    const id = selectItem.dataset.id;
+    if (id) {
+      if (selectItem.checked) selectedPenghuniIds.add(id);
+      else selectedPenghuniIds.delete(id);
+      updateBatchActions(getFilteredPenghuniList());
+    }
+    return;
+  }
+
+  const selectAll = event.target.closest('#selectAllPenghuni');
+  if (selectAll) {
+    const checked = selectAll.checked;
+    document.querySelectorAll('.select-item').forEach(checkbox => {
+      const id = checkbox.dataset.id;
+      if (!id) return;
+      checkbox.checked = checked;
+      if (checked) selectedPenghuniIds.add(id);
+      else selectedPenghuniIds.delete(id);
+    });
+    updateBatchActions(getFilteredPenghuniList());
+    return;
+  }
+
+  const clearSelection = event.target.closest('#btnClearSelection');
+  if (clearSelection) {
+    selectedPenghuniIds.clear();
+    document.querySelectorAll('.select-item').forEach(item => item.checked = false);
+    if ($('selectAllPenghuni')) $('selectAllPenghuni').checked = false;
+    updateBatchActions(getFilteredPenghuniList());
+    return;
+  }
+
+  const updateSelected = event.target.closest('#btnUpdateSelected');
+  if (updateSelected) {
+    if (selectedPenghuniIds.size !== 1) return;
+    const id = Array.from(selectedPenghuniIds)[0];
+    edit(id);
+    return;
+  }
+
+  const deleteSelected = event.target.closest('#btnDeleteSelected');
+  if (deleteSelected) {
+    const ids = Array.from(selectedPenghuniIds);
+    if (!ids.length) return;
+    if (!confirm(`Hapus ${ids.length} penghuni terpilih?`)) return;
+    deleteMultiple(ids);
     return;
   }
 
@@ -789,6 +889,19 @@ async function hapusKosan(id) {
     setStatus($('statusKosan'), 'Kosan berhasil dihapus.');
   }
   catch (error) { setStatus($('statusKosan'), 'Gagal: ' + error.message, true); }
+}
+
+async function deleteMultiple(ids) {
+  try {
+    for (const id of ids) {
+      await kirimData({ action: 'delete', id });
+    }
+    selectedPenghuniIds.clear();
+    await loadData();
+    setStatus($('status'), `${ids.length} penghuni berhasil dihapus.`);
+  } catch (error) {
+    setStatus($('status'), 'Gagal menghapus beberapa data: ' + error.message, true);
+  }
 }
 
 /* ===== Login & Logout ===== */

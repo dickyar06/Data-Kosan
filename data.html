@@ -63,18 +63,27 @@
     <!-- Data penghuni -->
     <section class="panel">
       <div class="table-top">
-        <h2>Data Penghuni</h2>
-        <div class="top-actions">
-          <input id="search" placeholder="Cari nama, kamar, atau kosan...">
-          <button id="btnResetFilter" class="secondary small-btn" type="button">Reset</button>
-          <button id="btnExportExcel" class="green small-btn" type="button">Export Excel</button>
-          <button id="btnTambahPenghuni">＋ Tambah Penghuni</button>
+        <div class="top-left">
+          <h2>Data Penghuni</h2>
+          <div class="top-actions">
+            <input id="search" placeholder="Cari nama, kamar, atau kosan...">
+            <button id="btnResetFilter" class="secondary small-btn" type="button">Reset</button>
+            <button id="btnExportExcel" class="green small-btn" type="button">Export Excel</button>
+            <button id="btnTambahPenghuni">＋ Tambah Penghuni</button>
+          </div>
+        </div>
+        <div class="top-right hidden" id="topRightActions">
+          <span id="selectedCount" class="selection-info">0 terpilih</span>
+          <button id="btnClearSelection" class="secondary small-btn" type="button" disabled>Batal Pilihan</button>
+          <button id="btnUpdateSelected" class="secondary small-btn" type="button" disabled>Update Terpilih</button>
+          <button id="btnDeleteSelected" class="delete small-btn" type="button" disabled>Hapus Terpilih</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAllPenghuni" aria-label="Pilih semua penghuni"></th>
               <th><div class="th-with-filter"><span>Foto</span></div></th>
               <th><div class="th-with-filter"><span>Nama</span><div class="filter-wrap"><button class="filter-trigger" data-column="nama" type="button" aria-label="Filter nama">⏷</button><div class="filter-menu hidden"></div></div></div></th>
               <th><div class="th-with-filter"><span>No. HP</span><div class="filter-wrap"><button class="filter-trigger" data-column="noHp" type="button" aria-label="Filter nomor HP">⏷</button><div class="filter-menu hidden"></div></div></div></th>
@@ -85,7 +94,6 @@
               <th><div class="th-with-filter"><span>Durasi</span><div class="filter-wrap"><button class="filter-trigger" data-column="durasi" type="button" aria-label="Filter durasi">⏷</button><div class="filter-menu hidden"></div></div></div></th>
               <th><div class="th-with-filter"><span>Jatuh Tempo</span><div class="filter-wrap"><button class="filter-trigger" data-column="tanggalSelesai" type="button" aria-label="Filter jatuh tempo">⏷</button><div class="filter-menu hidden"></div></div></div></th>
               <th><div class="th-with-filter"><span>Status</span><div class="filter-wrap"><button class="filter-trigger" data-column="status" type="button" aria-label="Filter status">⏷</button><div class="filter-menu hidden"></div></div></div></th>
-              <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="dataPenghuni"></tbody>
