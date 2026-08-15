@@ -776,6 +776,22 @@ th {
   gap: 10px;
 }
 
+#pilihKamarKosan {
+  min-width: 220px;
+}
+
+#pilihKamarKosan:disabled {
+  color: #64748b;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.data-sementara {
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .sk-tile {
   border-radius: 10px;
   padding: 14px 10px;
@@ -889,4 +905,3 @@ th {
     font-size: 23px;
   }
 }
-

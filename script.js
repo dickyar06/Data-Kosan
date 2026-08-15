@@ -130,10 +130,18 @@ function renderStatusKamar() {
   const kontainer = $('statusKamar');
   if (!pilih || !kontainer) return;
 
-  // Isi dropdown pilihan kosan hanya jika kosan belum dimuat atau saat daftar kosan dipilih
+  // Tampilkan kosan pertama secara otomatis agar status tidak tampak kosong.
   const nilaiSaatIni = pilih.value;
-  pilih.innerHTML = kosan.length ? '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('') : '<option value="">Belum ada kosan</option>';
-  if (nilaiSaatIni) pilih.value = nilaiSaatIni;
+  if (!kosan.length) {
+    pilih.disabled = true;
+    pilih.innerHTML = '<option value="">Belum ada data kosan</option>';
+    kontainer.innerHTML = '<div class="empty">Belum ada kosan. Tambahkan data kosan terlebih dahulu.</div>';
+    return;
+  }
+
+  pilih.disabled = false;
+  pilih.innerHTML = kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('');
+  pilih.value = kosan.some(k => k.namaKosan === nilaiSaatIni) ? nilaiSaatIni : kosan[0].namaKosan;
 
   const namaKosan = pilih.value;
   if (!namaKosan) {
@@ -170,7 +178,12 @@ function renderKosan() {
   // Tabel Data Kosan (halaman data)
   const dataKosan = $('dataKosan');
   if (dataKosan) {
-    dataKosan.innerHTML = kosan.length ? kosan.map(k => `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td><button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
+    dataKosan.innerHTML = kosan.length ? kosan.map(k => {
+      const aksi = k.sementara
+        ? '<span class="data-sementara">Menunggu sinkronisasi</span>'
+        : `<button class="update" onclick="editKosan('${k.id}')">Update</button><button class="delete" onclick="hapusKosan('${k.id}')">Hapus</button>`;
+      return `<tr><td>${escapeHtml(k.namaKosan)}</td><td>${k.jumlahKamar} kamar</td><td>${aksi}</td></tr>`;
+    }).join('') : '<tr><td colspan="3" class="empty">Belum ada kosan. Tambahkan kosan terlebih dahulu.</td></tr>';
   }
 
   // Ringkasan kosan (halaman dashboard)
@@ -391,11 +404,45 @@ function updateBatchActions(visibleList = []) {
 
 async function loadData() {
   const hasilPenghuni = await ambilDataJSONP('list');
-  const hasilKosan = await ambilDataJSONP('listKosan');
-  penghuni = hasilPenghuni.data || [];
-  kosan = hasilKosan.data || [];
+  if (!hasilPenghuni || hasilPenghuni.success !== true || !Array.isArray(hasilPenghuni.data)) {
+    throw new Error((hasilPenghuni && hasilPenghuni.message) || 'Data penghuni tidak dapat dibaca.');
+  }
+  penghuni = hasilPenghuni.data;
+
+  try {
+    const hasilKosan = await ambilDataJSONP('listkosan');
+    if (!hasilKosan || hasilKosan.success !== true || !Array.isArray(hasilKosan.data)) {
+      throw new Error((hasilKosan && hasilKosan.message) || 'Data kosan tidak valid.');
+    }
+    kosan = hasilKosan.data;
+  } catch (error) {
+    // Tetap tampilkan kosan lama bila deployment Apps Script belum diperbarui.
+    console.warn('Data Kosan tidak dapat dimuat; menggunakan data Penghuni sebagai cadangan.', error);
+    kosan = buatKosanDariPenghuni();
+  }
+
+  if (!kosan.length && penghuni.length) kosan = buatKosanDariPenghuni();
   isiDropdownKosan();
   render();
+}
+
+function buatKosanDariPenghuni() {
+  const hasil = new Map();
+  penghuni.forEach(p => {
+    const nama = String(p.namaKosan || '').trim();
+    if (!nama) return;
+
+    const kunci = nama.toLocaleLowerCase('id-ID');
+    const jumlahKamar = Math.max(1, Number(normKamar(p.kamar)) || 1);
+    const lama = hasil.get(kunci);
+    hasil.set(kunci, {
+      id: `sementara-${encodeURIComponent(kunci)}`,
+      namaKosan: lama ? lama.namaKosan : nama,
+      jumlahKamar: Math.max(lama ? lama.jumlahKamar : 0, jumlahKamar),
+      sementara: true
+    });
+  });
+  return Array.from(hasil.values());
 }
 
 function normalizeImageUrl(url, isThumb = false) {

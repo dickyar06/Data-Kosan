@@ -153,10 +153,13 @@ function getKosan_() {
   const lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    return [];
+    migrasiKosanDariPenghuni_(sheet);
   }
 
-  const rows = sheet.getRange(2, 1, lastRow - 1, HEADERS_KOSAN.length).getValues();
+  const lastRowSetelahMigrasi = sheet.getLastRow();
+  if (lastRowSetelahMigrasi < 2) return [];
+
+  const rows = sheet.getRange(2, 1, lastRowSetelahMigrasi - 1, HEADERS_KOSAN.length).getValues();
 
   return rows
     .map(row => ({
@@ -166,6 +169,81 @@ function getKosan_() {
     }))
     .filter(data => data.id)
     .reverse();
+}
+
+/*
+ * Migrasi satu kali untuk data lama: sebelum sheet Kosan dibuat, nama kosan
+ * hanya tersimpan di sheet Penghuni. Jumlah kamar diambil dari nomor kamar
+ * terbesar yang pernah dipakai. Nilai ini dapat diedit melalui menu Data.
+ */
+function migrasiKosanDariPenghuni_(sheetKosan) {
+  const penghuni = getPenghuni_();
+  const daftar = new Map();
+
+  penghuni.forEach(data => {
+    const nama = String(data.namaKosan || '').trim();
+    if (!nama) return;
+
+    const kunci = normalisasiTeks_(nama);
+    const nomor = Number(normalisasiKamar_(data.kamar)) || 1;
+    const lama = daftar.get(kunci);
+    daftar.set(kunci, {
+      namaKosan: lama ? lama.namaKosan : nama,
+      jumlahKamar: Math.max(lama ? lama.jumlahKamar : 0, nomor)
+    });
+  });
+
+  const rows = Array.from(daftar.values()).map(kosan => [
+    Utilities.getUuid(),
+    kosan.namaKosan,
+    kosan.jumlahKamar,
+    new Date()
+  ]);
+
+  if (rows.length) {
+    sheetKosan.getRange(2, 1, rows.length, HEADERS_KOSAN.length).setValues(rows);
+  }
+}
+
+function normalisasiTeks_(nilai) {
+  return String(nilai || '').trim().toLowerCase();
+}
+
+function normalisasiKamar_(nilai) {
+  const cocok = String(nilai || '').trim().match(/\d+/);
+  return cocok ? String(Number(cocok[0])) : '';
+}
+
+function getKosanByName_(namaKosan) {
+  const target = normalisasiTeks_(namaKosan);
+  return getKosan_().find(kosan => normalisasiTeks_(kosan.namaKosan) === target) || null;
+}
+
+function jumlahKamarTerisi_(namaKosan, excludeId) {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+
+  const target = normalisasiTeks_(namaKosan);
+  return sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues()
+    .filter(row => String(row[0] || '') !== String(excludeId || ''))
+    .filter(row => normalisasiTeks_(row[11]) === target)
+    .filter(row => normalisasiTeks_(row[7] || 'Aktif') === 'aktif')
+    .length;
+}
+
+function validasiKamarKosan_(namaKosan, kamar) {
+  const kosan = getKosanByName_(namaKosan);
+  if (!kosan) {
+    throw new Error('Nama kosan tidak ditemukan. Tambahkan kosan terlebih dahulu.');
+  }
+
+  const nomorKamar = Number(normalisasiKamar_(kamar));
+  if (!Number.isInteger(nomorKamar) || nomorKamar < 1 || nomorKamar > Number(kosan.jumlahKamar)) {
+    throw new Error(`Nomor kamar harus antara 01 dan ${kosan.jumlahKamar} untuk ${kosan.namaKosan}.`);
+  }
+
+  return kosan;
 }
 
 function tambahKosan_(data) {
@@ -183,6 +261,9 @@ function tambahKosan_(data) {
 
   try {
     const sheet = getKosanSheet_();
+    if (getKosanByName_(data.namaKosan)) {
+      throw new Error('Nama kosan sudah terdaftar.');
+    }
     sheet.appendRow([
       Utilities.getUuid(),
       String(data.namaKosan).trim(),
@@ -226,7 +307,22 @@ function updateKosan_(data) {
 
   try {
     const rowIndex = baris + 2;
-    sheet.getRange(rowIndex, 2).setValue(String(data.namaKosan).trim());
+    const namaLama = String(sheet.getRange(rowIndex, 2).getValue() || '').trim();
+    const namaBaru = String(data.namaKosan).trim();
+    const kosanDenganNamaBaru = getKosanByName_(namaBaru);
+    if (kosanDenganNamaBaru && String(kosanDenganNamaBaru.id) !== String(data.id)) {
+      throw new Error('Nama kosan sudah digunakan oleh kosan lain.');
+    }
+
+    const kamarTerisi = jumlahKamarTerisi_(namaLama);
+    if (normalisasiTeks_(namaLama) !== normalisasiTeks_(namaBaru) && kamarTerisi > 0) {
+      throw new Error('Nama kosan tidak dapat diubah karena masih memiliki penghuni aktif.');
+    }
+    if (jumlahKamar < kamarTerisi) {
+      throw new Error(`Jumlah kamar tidak boleh kurang dari kamar terisi (${kamarTerisi}).`);
+    }
+
+    sheet.getRange(rowIndex, 2).setValue(namaBaru);
     sheet.getRange(rowIndex, 3).setValue(jumlahKamar);
 
     return {
@@ -251,7 +347,13 @@ function hapusKosan_(id) {
   const index = ids.findIndex(item => String(item) === String(id));
   if (index === -1) throw new Error('Kosan tidak ditemukan.');
 
-  sheet.deleteRow(index + 2);
+  const rowIndex = index + 2;
+  const namaKosan = String(sheet.getRange(rowIndex, 2).getValue() || '');
+  if (jumlahKamarTerisi_(namaKosan) > 0) {
+    throw new Error('Kosan tidak dapat dihapus karena masih memiliki penghuni aktif. Pindahkan atau selesaikan data penghuni terlebih dahulu.');
+  }
+
+  sheet.deleteRow(rowIndex);
 
   return {
     success: true,
@@ -302,20 +404,20 @@ function cekKamarTerisi_(namaKosan, kamar, excludeId) {
   if (lastRow < 2) return false;
 
   const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
-  const namaKosanTujuan = String(namaKosan || '').trim().toLowerCase();
-  const kamarTujuan = String(kamar || '').trim().toLowerCase();
+  const namaKosanTujuan = normalisasiTeks_(namaKosan);
+  const kamarTujuan = normalisasiKamar_(kamar);
 
   return values.some(row => {
     const id = String(row[0] || '');
-    const kosan = String(row[11] || '').trim().toLowerCase();
-    const noKamar = String(row[3] || '').trim().toLowerCase();
-    const status = String(row[7] || 'Aktif');
+    const kosan = normalisasiTeks_(row[11]);
+    const noKamar = normalisasiKamar_(row[3]);
+    const status = normalisasiTeks_(row[7] || 'Aktif');
 
     // Abaikan jika ini data yang sedang di-update (id sama)
     if (excludeId && id === String(excludeId)) return false;
 
     // Hanya menghitung penghuni Aktif
-    if (status !== 'Aktif') return false;
+    if (status !== 'aktif') return false;
 
     return kosan === namaKosanTujuan && noKamar === kamarTujuan;
   });
@@ -435,6 +537,8 @@ function tambahPenghuni_(data) {
     throw new Error('Durasi sewa minimal 1 bulan.');
   }
 
+  const kosanDipilih = validasiKamarKosan_(data.namaKosan, data.kamar);
+
   const tanggalSelesai = new Date(tanggalMasuk);
   tanggalSelesai.setMonth(tanggalSelesai.getMonth() + durasi);
 
@@ -443,7 +547,7 @@ function tambahPenghuni_(data) {
 
   try {
     // Pastikan 1 kamar hanya untuk 1 penghuni aktif
-    if (cekKamarTerisi_(data.namaKosan, data.kamar)) {
+    if (cekKamarTerisi_(kosanDipilih.namaKosan, data.kamar)) {
       throw new Error('Kamar ' + data.kamar + ' di ' + data.namaKosan + ' sudah terisi oleh penghuni aktif.');
     }
 
@@ -464,7 +568,7 @@ function tambahPenghuni_(data) {
       new Date(),
       String(data.kontakNama).trim(),
       String(data.kontakNoHp).trim(),
-      String(data.namaKosan).trim(),
+      kosanDipilih.namaKosan,
       fotoUrl
     ];
     Logger.log('Menyimpan row dengan foto URL di kolom 13 (index 12): ' + (fotoUrl || '[KOSONG]'));
@@ -501,6 +605,8 @@ function updatePenghuni_(data) {
     throw new Error('Durasi sewa minimal 1 bulan.');
   }
 
+  const kosanDipilih = validasiKamarKosan_(data.namaKosan, data.kamar);
+
   const tanggalSelesai = new Date(tanggalMasuk);
   tanggalSelesai.setMonth(tanggalSelesai.getMonth() + durasi);
 
@@ -517,7 +623,7 @@ function updatePenghuni_(data) {
 
   try {
     // Pastikan 1 kamar hanya untuk 1 penghuni aktif (abaikan data yang sedang di-update)
-    if (cekKamarTerisi_(data.namaKosan, data.kamar, data.id)) {
+    if (cekKamarTerisi_(kosanDipilih.namaKosan, data.kamar, data.id)) {
       throw new Error('Kamar ' + data.kamar + ' di ' + data.namaKosan + ' sudah terisi oleh penghuni aktif.');
     }
 
@@ -535,7 +641,7 @@ function updatePenghuni_(data) {
     sheet.getRange(rowIndex, 8).setValue(data.status === 'Selesai' ? 'Selesai' : 'Aktif');
     sheet.getRange(rowIndex, 10).setValue(String(data.kontakNama).trim());
     sheet.getRange(rowIndex, 11).setValue(String(data.kontakNoHp).trim());
-    sheet.getRange(rowIndex, 12).setValue(String(data.namaKosan).trim());
+    sheet.getRange(rowIndex, 12).setValue(kosanDipilih.namaKosan);
     sheet.getRange(rowIndex, 13).setValue(fotoUrl);
 
     return {
