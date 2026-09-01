@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DIVA THREE-DI KOST - Pembayaran</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css?v=20260815-1840">
+</head>
+<body class="halaman-data">
+  <div id="loginScreen">
+    <div class="login-box">
+      <div class="login-logo">🏠</div>
+      <h1 class="login-title">DIVA THREE-DI KOST</h1>
+      <p class="login-sub">Silakan masuk untuk melihat pembayaran</p>
+      <form id="formLogin" class="login-form">
+        <label>Username<input name="username" required autocomplete="username" placeholder="Masukkan username"></label>
+        <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
+        <button type="submit" id="btnLogin">Masuk</button>
+      </form>
+      <div id="statusLogin"></div>
+    </div>
+  </div>
+
+  <div id="dashboard">
+  <header>
+    <div class="header-wrap">
+      <h1>🏠 DIVA THREE-DI KOST</h1>
+      <nav class="nav">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="data.html">Data</a>
+        <a class="nav-link aktif" href="payments.html">Pembayaran</a>
+        <button id="btnLogout" class="logout">Keluar</button>
+      </nav>
+    </div>
+    <p>Manajemen Pembayaran Penghuni</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="table-top">
+        <h2>Harga Kosan (per bulan)</h2>
+        <div>
+          <select id="paymentsKosanSelect"></select>
+          <input id="inputHargaKosan" type="number" placeholder="Masukkan harga (IDR)">
+          <button id="btnSetHarga" class="green">Set Harga</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="table-top">
+        <h2>Daftar Pembayaran</h2>
+        <div class="top-actions">
+          <button id="btnRefreshPayments" class="secondary">Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Kosan</th>
+              <th>Kamar</th>
+              <th>Tagihan</th>
+              <th>Telah Dibayar</th>
+              <th>Sisa</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="script.js?v=20260815-1840"></script>
+</body>
+</html>

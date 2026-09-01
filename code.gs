@@ -1,3 +1,4 @@
+
 const SHEET_NAME = 'Penghuni';
 const SHEET_KOSAN = 'Kosan';
 const SPREADSHEET_ID = '1_t-CmVldLgbTg5bpC_8RA5JXjAjd1rio5MWh5swTYkc';
@@ -27,6 +28,17 @@ function doGet(e) {
         success: true,
         data: getPenghuni_()
       };
+    } else if (action === 'listpayments') {
+      hasil = {
+        success: true,
+        data: getPayments_()
+      };
+    } else if (action === 'listkosanprices') {
+      // return mapping { namaKosan: harga }
+      const rows = getPrices_();
+      const map = {};
+      rows.forEach(r => { if (r.namaKosan) map[r.namaKosan] = Number(r.harga || 0); });
+      hasil = { success: true, data: map };
     } else {
       hasil = {
         success: false,
@@ -69,6 +81,12 @@ function doPost(e) {
 
       case "deletekosan":
         return jsonResponse_(hapusKosan_(data.id));
+
+      case 'savepayment':
+        return jsonResponse_(simpanPayment_(data));
+
+      case 'savekosanprice':
+        return jsonResponse_(simpanKosanPrice_(data));
 
       default:
         return jsonResponse_({
@@ -726,4 +744,74 @@ function testUploadFoto() {
   const sample = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAF';
   const result = simpanFotoIdentitas_(sample);
   Logger.log(result);
+}
+
+/* ===== Payments & Prices helpers ===== */
+function getPayments_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sh = ss.getSheetByName('Payments');
+  if (!sh) return [];
+  const data = sh.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data[0].map(h => String(h || '').trim());
+  const rows = data.slice(1);
+  return rows.map(r => {
+    const obj = {};
+    for (let i = 0; i < headers.length; i++) obj[headers[i]] = r[i];
+    return obj;
+  }).reverse();
+}
+
+function getPrices_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sh = ss.getSheetByName('Prices');
+  if (!sh) return [];
+  const data = sh.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data[0].map(h => String(h || '').trim());
+  const rows = data.slice(1);
+  return rows.map(r => {
+    const obj = {};
+    for (let i = 0; i < headers.length; i++) obj[headers[i]] = r[i];
+    return obj;
+  }).reverse();
+}
+
+function simpanPayment_(data) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sh = ss.getSheetByName('Payments');
+    if (!sh) sh = ss.insertSheet('Payments');
+    // Ensure header
+    if (sh.getLastRow() < 1) sh.appendRow(['id','penghuniId','nama','namaKosan','amount','date']);
+    sh.appendRow([data.id || Utilities.getUuid(), data.penghuniId || '', data.nama || '', data.namaKosan || '', data.amount || 0, data.date || new Date()]);
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+}
+
+function simpanKosanPrice_(data) {
+  try {
+    const nama = data.namaKosan;
+    const harga = Number(data.harga || 0);
+    if (!nama) throw new Error('namaKosan kosong');
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sh = ss.getSheetByName('Prices');
+    if (!sh) sh = ss.insertSheet('Prices');
+    // Ensure header
+    if (sh.getLastRow() < 1) sh.appendRow(['namaKosan','harga']);
+    const rows = sh.getDataRange().getValues();
+    const ids = rows.slice(1).map(r => String(r[0] || ''));
+    for (let i = 0; i < ids.length; i++) {
+      if (String(ids[i]) === String(nama)) {
+        sh.getRange(i + 2, 2).setValue(harga);
+        return { success: true };
+      }
+    }
+    sh.appendRow([nama, harga]);
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
 }

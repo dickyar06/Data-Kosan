@@ -25,6 +25,12 @@ let editKosanId = null;
 let chartKosan = null, chartStatus = null, chartBulan = null;
 let selectedPenghuniIds = new Set();
 
+// Penyimpanan lokal untuk fitur pembayaran
+const PAYMENTS_KEY = 'diva_kosan_payments';
+const KOSAN_PRICE_KEY = 'diva_kosan_prices';
+let payments = [];
+let kosanPrices = {}; // { namaKosan: number }
+
 const $ = id => document.getElementById(id);
 
 const FOTO_PLACEHOLDER = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
@@ -55,6 +61,144 @@ const normKamar = teks => {
 function bukaModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('terbuka');
+}
+
+/* ===== Fitur Pembayaran (localStorage) ===== */
+function loadPaymentsFromStorage() {
+  // Prefer server data when available; fallback to localStorage
+  payments = [];
+  kosanPrices = {};
+  // Attempt to load from server via JSONP (GET). If it fails, fallback to localStorage.
+  ambilDataJSONP('listPayments').then(result => {
+    if (result && result.success && Array.isArray(result.data)) {
+      payments = result.data;
+    } else {
+      try { const raw = localStorage.getItem(PAYMENTS_KEY); payments = raw ? JSON.parse(raw) : []; } catch (e) { payments = []; }
+    }
+    // Try to load prices
+    ambilDataJSONP('listKosanPrices').then(res2 => {
+      if (res2 && res2.success && typeof res2.data === 'object') kosanPrices = res2.data;
+      else {
+        try { kosanPrices = JSON.parse(localStorage.getItem(KOSAN_PRICE_KEY) || '{}'); } catch (e) { kosanPrices = {}; }
+      }
+      renderPaymentsPage();
+    }).catch(() => {
+      try { kosanPrices = JSON.parse(localStorage.getItem(KOSAN_PRICE_KEY) || '{}'); } catch (e) { kosanPrices = {}; }
+      renderPaymentsPage();
+    });
+  }).catch(() => {
+    try { const raw = localStorage.getItem(PAYMENTS_KEY); payments = raw ? JSON.parse(raw) : []; } catch (e) { payments = []; }
+    try { kosanPrices = JSON.parse(localStorage.getItem(KOSAN_PRICE_KEY) || '{}'); } catch (e) { kosanPrices = {}; }
+    renderPaymentsPage();
+  });
+}
+
+function savePaymentsToStorage() {
+  try { localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments)); } catch (e) { console.warn('Gagal menyimpan payments', e); }
+  try { localStorage.setItem(KOSAN_PRICE_KEY, JSON.stringify(kosanPrices)); } catch (e) { console.warn('Gagal menyimpan kosanPrices', e); }
+}
+
+// Try to save price to server; fallback to localStorage when server not available
+async function saveKosanPriceToServer(nama, harga) {
+  try {
+    const res = await kirimData({ action: 'saveKosanPrice', namaKosan: nama, harga: Number(harga) });
+    return res && res.success === true;
+  } catch (e) {
+    console.warn('Gagal menyimpan harga ke server, gunakan localStorage sebagai fallback.', e);
+    return false;
+  }
+}
+
+// Try to save a single payment to server; fallback to localStorage
+async function savePaymentToServer(payment) {
+  try {
+    const res = await kirimData({ ...payment, action: 'savePayment' });
+    return res && res.success === true;
+  } catch (e) {
+    console.warn('Gagal menyimpan pembayaran ke server, gunakan localStorage sebagai fallback.', e);
+    return false;
+  }
+}
+
+function formatCurrency(amount) {
+  if (amount === null || amount === undefined || amount === '') return '-';
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(amount));
+}
+
+function renderPaymentsPage() {
+  // Hanya jalankan bila elemen ada di halaman
+  loadPaymentsFromStorage();
+  const sel = $('paymentsKosanSelect');
+  const inputHarga = $('inputHargaKosan');
+  const table = $('paymentsTable');
+  if (sel) {
+    sel.innerHTML = kosan.length ? '<option value="">-- Pilih kosan --</option>' + kosan.map(k => `<option value="${escapeHtml(k.namaKosan)}">${escapeHtml(k.namaKosan)}</option>`).join('') : '<option value="">Belum ada kosan</option>';
+  }
+
+  if (sel && inputHarga) {
+    sel.addEventListener('change', () => {
+      const v = sel.value;
+      inputHarga.value = kosanPrices[v] || '';
+    });
+  }
+
+  if (table) {
+    const rows = penghuni.map(p => {
+      const tagihan = kosanPrices[p.namaKosan] ? Number(kosanPrices[p.namaKosan]) : 0;
+      const sudah = payments.filter(x => x.penghuniId === p.id).reduce((s, x) => s + Number(x.amount || 0), 0);
+      const sisa = Math.max(0, tagihan - sudah);
+      const status = tagihan === 0 ? '-' : (sudah === 0 ? 'Belum' : (sisa === 0 ? 'Lunas' : (sudah < tagihan ? 'DP' : 'Lunas')));
+      return `<tr>
+        <td>${escapeHtml(p.nama)}</td>
+        <td>${escapeHtml(p.namaKosan)}</td>
+        <td>${escapeHtml(normKamar(p.kamar))}</td>
+        <td>${tagihan ? formatCurrency(tagihan) : '-'}</td>
+        <td>${formatCurrency(sudah)}</td>
+        <td>${tagihan ? formatCurrency(sisa) : '-'}</td>
+        <td><button class="green btn-bayar" data-id="${escapeHtml(p.id)}">Bayar</button></td>
+      </tr>`;
+    });
+    table.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" class="empty">Belum ada penghuni.</td></tr>';
+  }
+
+  // Bind tombol set harga
+  const btnSet = $('btnSetHarga');
+  if (btnSet) {
+    btnSet.onclick = async () => {
+      const nama = sel ? sel.value : '';
+      const harga = inputHarga ? Number(inputHarga.value || 0) : 0;
+      if (!nama) { alert('Pilih kosan dulu.'); return; }
+      if (!harga || harga <= 0) { if (!confirm('Harga kosong atau 0. Tetap simpan?')) return; }
+      kosanPrices[nama] = harga;
+      const ok = await saveKosanPriceToServer(nama, harga);
+      savePaymentsToStorage();
+      renderPaymentsPage();
+      alert(ok ? 'Harga kosan disimpan ke server.' : 'Harga disimpan di localStorage (server gagal).');
+    };
+  }
+
+  const btnRefresh = $('btnRefreshPayments');
+  if (btnRefresh) btnRefresh.onclick = renderPaymentsPage;
+}
+
+async function recordPayment(penghuniId) {
+  const p = penghuni.find(x => x.id === penghuniId);
+  if (!p) { alert('Penghuni tidak ditemukan'); return; }
+  const tagihan = kosanPrices[p.namaKosan] ? Number(kosanPrices[p.namaKosan]) : 0;
+  const sudah = payments.filter(x => x.penghuniId === p.id).reduce((s, x) => s + Number(x.amount || 0), 0);
+  const sisa = Math.max(0, tagihan - sudah);
+  const teks = sisa > 0 ? `Sisa tagihan ${formatCurrency(sisa)}. Masukkan jumlah pembayaran:` : 'Tagihan sudah lunas. Masukkan jumlah pembayaran ekstra jika perlu:';
+  const input = prompt(teks, sisa > 0 ? sisa : '0');
+  if (input === null) return;
+  const jumlah = Number(input);
+  if (isNaN(jumlah) || jumlah <= 0) { alert('Jumlah tidak valid.'); return; }
+  const payment = { id: 'pmt-' + Date.now(), penghuniId: p.id, nama: p.nama, namaKosan: p.namaKosan, amount: jumlah, date: new Date().toISOString() };
+  payments.push(payment);
+  // Attempt server save; if fails, keep local copy
+  const ok = await savePaymentToServer(payment);
+  savePaymentsToStorage();
+  renderPaymentsPage();
+  alert(ok ? 'Pembayaran tercatat di server.' : 'Pembayaran tercatat di localStorage (server gagal).');
 }
 
 function tutupModal(id) {
@@ -379,6 +523,7 @@ function render() {
   renderKosan();
   renderStatusKamar();
   renderCharts();
+  renderPaymentsPage();
 }
 
 function updateBatchActions(visibleList = []) {
@@ -836,6 +981,13 @@ document.addEventListener('click', event => {
     if (!ids.length) return;
     if (!confirm(`Hapus ${ids.length} penghuni terpilih?`)) return;
     deleteMultiple(ids);
+    return;
+  }
+
+  const bayarBtn = event.target.closest('.btn-bayar');
+  if (bayarBtn) {
+    const id = bayarBtn.dataset.id;
+    if (id) recordPayment(id);
     return;
   }
 
