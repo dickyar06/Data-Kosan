@@ -344,10 +344,12 @@ function getFilteredPenghuniList() {
 function render() {
   renderColumnFilterMenus();
 
+  // Dapatkan daftar penghuni yang sudah difilter (digunakan oleh beberapa bagian)
+  const list = getFilteredPenghuniList();
+
   // Tabel penghuni (halaman data)
   const dataPenghuni = $('dataPenghuni');
   if (dataPenghuni) {
-    const list = getFilteredPenghuniList();
     dataPenghuni.innerHTML = list.length ? list.map(p => {
       const jatuh = p.tanggalSelesai || '';
       const hariJatuh = jatuh ? selisihHari(jatuh) : null;
