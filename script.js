@@ -125,9 +125,21 @@ function formatCurrency(amount) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(amount));
 }
 
+// Format number with dots as thousand separators (e.g., 9000000 -> "9.000.000")
+function formatWithDots(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const n = Number(String(value).replace(/[^0-9]/g, '')) || 0;
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function parseNumberFromFormatted(text) {
+  if (!text && text !== 0) return 0;
+  const s = String(text).replace(/[^0-9-]/g, '');
+  return Number(s || 0);
+}
+
 function renderPaymentsPage() {
   // Hanya jalankan bila elemen ada di halaman
-  loadPaymentsFromStorage();
   const sel = $('paymentsKosanSelect');
   const inputHarga = $('inputHargaKosan');
   const table = $('paymentsTable');
@@ -136,9 +148,17 @@ function renderPaymentsPage() {
   }
 
   if (sel && inputHarga) {
-    sel.addEventListener('change', () => {
+    sel.onchange = () => {
       const v = sel.value;
-      inputHarga.value = kosanPrices[v] || '';
+      inputHarga.value = kosanPrices[v] ? formatWithDots(kosanPrices[v]) : '';
+    };
+    // format saat mengetik dan saat kehilangan fokus
+    inputHarga.addEventListener('input', () => {
+      const raw = inputHarga.value.replace(/[^0-9]/g, '');
+      inputHarga.value = raw ? formatWithDots(raw) : '';
+    });
+    inputHarga.addEventListener('blur', () => {
+      // nothing extra for now
     });
   }
 
@@ -166,7 +186,7 @@ function renderPaymentsPage() {
   if (btnSet) {
     btnSet.onclick = async () => {
       const nama = sel ? sel.value : '';
-      const harga = inputHarga ? Number(inputHarga.value || 0) : 0;
+      const harga = inputHarga ? parseNumberFromFormatted(inputHarga.value || '') : 0;
       if (!nama) { alert('Pilih kosan dulu.'); return; }
       if (!harga || harga <= 0) { if (!confirm('Harga kosong atau 0. Tetap simpan?')) return; }
       kosanPrices[nama] = harga;
@@ -182,23 +202,24 @@ function renderPaymentsPage() {
 }
 
 async function recordPayment(penghuniId) {
+  // Open modal instead of prompt
   const p = penghuni.find(x => x.id === penghuniId);
   if (!p) { alert('Penghuni tidak ditemukan'); return; }
+  const jumlahInput = $('bayarJumlah');
+  const namaInput = $('bayarNama');
+  const idInput = $('bayarPenghuniId');
+  if (!jumlahInput || !namaInput || !idInput) {
+    alert('Form pembayaran tidak tersedia.');
+    return;
+  }
+  idInput.value = p.id;
+  namaInput.value = p.nama;
+  // Default amount = remaining tagihan if available
   const tagihan = kosanPrices[p.namaKosan] ? Number(kosanPrices[p.namaKosan]) : 0;
   const sudah = payments.filter(x => x.penghuniId === p.id).reduce((s, x) => s + Number(x.amount || 0), 0);
   const sisa = Math.max(0, tagihan - sudah);
-  const teks = sisa > 0 ? `Sisa tagihan ${formatCurrency(sisa)}. Masukkan jumlah pembayaran:` : 'Tagihan sudah lunas. Masukkan jumlah pembayaran ekstra jika perlu:';
-  const input = prompt(teks, sisa > 0 ? sisa : '0');
-  if (input === null) return;
-  const jumlah = Number(input);
-  if (isNaN(jumlah) || jumlah <= 0) { alert('Jumlah tidak valid.'); return; }
-  const payment = { id: 'pmt-' + Date.now(), penghuniId: p.id, nama: p.nama, namaKosan: p.namaKosan, amount: jumlah, date: new Date().toISOString() };
-  payments.push(payment);
-  // Attempt server save; if fails, keep local copy
-  const ok = await savePaymentToServer(payment);
-  savePaymentsToStorage();
-  renderPaymentsPage();
-  alert(ok ? 'Pembayaran tercatat di server.' : 'Pembayaran tercatat di localStorage (server gagal).');
+  jumlahInput.value = sisa > 0 ? sisa : '';
+  bukaModal('modalBayar');
 }
 
 function tutupModal(id) {
@@ -503,7 +524,6 @@ function render() {
       const fotoData = encodeURIComponent(fotoUrl);
       const isSelected = selectedPenghuniIds.has(p.id);
       return `<tr class="${isSelected ? 'row-selected' : ''}"><td class="select-cell"><input type="checkbox" class="select-item" data-id="${escapeHtml(p.id)}" ${isSelected ? 'checked' : ''}></td><td class="foto-cell"><img class="foto-thumb" src="${escapeHtml(fotoThumb)}" alt="Foto identitas ${escapeHtml(p.nama)}" data-image="${fotoData}" data-nama="${escapeHtml(p.nama)}" /></td><td>${escapeHtml(p.nama)}</td><td>${escapeHtml(p.noHp)}</td><td>${escapeHtml(p.kontakNama)}<br><small>${escapeHtml(p.kontakNoHp)}</small></td><td>${escapeHtml(p.namaKosan)}</td><td>${escapeHtml(normKamar(p.kamar))}</td><td>${formatTanggal(p.tanggalMasuk)}</td><td>${p.durasi} bulan</td><td class="${mendekati ? 'tempo-dekat' : ''}">${formatTanggal(jatuh)}</td><td><span class="badge ${p.status === 'Aktif' ? 'aktif' : 'selesai'}">${p.status}</span></td><td><button class="green btn-bayar" data-id="${escapeHtml(p.id)}">Bayar</button></td></tr>`;
-    }).join('') : '<tr><td colspan="11" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
     }).join('') : '<tr><td colspan="12" class="empty">' + (filterTempo ? 'Tidak ada penghuni yang akan jatuh tempo.' : 'Belum ada data penghuni.') + '</td></tr>';
   }
 
@@ -638,7 +658,8 @@ function setFotoPreview(url, nama = '') {
   if (hidden) hidden.value = url || '';
   if (hapusFoto) hapusFoto.value = '0';
   if (preview) {
-    preview.src = url || '';
+    // Normalize URL for preview so Drive links and data URLs render correctly
+    preview.src = url ? normalizeImageUrl(url) : '';
     preview.classList.toggle('aktif', Boolean(url));
   }
   if (fotoInput && !url) fotoInput.value = '';
@@ -749,6 +770,35 @@ document.querySelectorAll('.modal-close').forEach(btn => {
     tutupModal(modalId);
   });
 });
+
+// Modal Pembayaran: handle form submit + cancel
+const formBayar = $('formBayar');
+if (formBayar) {
+  const bayarJumlahInput = $('bayarJumlah');
+  if (bayarJumlahInput) {
+    bayarJumlahInput.addEventListener('input', () => {
+      const raw = bayarJumlahInput.value.replace(/[^0-9]/g, '');
+      bayarJumlahInput.value = raw ? formatWithDots(raw) : '';
+    });
+  }
+  formBayar.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = $('bayarPenghuniId').value;
+    const jumlah = parseNumberFromFormatted($('bayarJumlah').value || '');
+    if (!id || !jumlah || jumlah <= 0) { setStatus($('statusBayar'), 'Jumlah pembayaran tidak valid.', true); return; }
+    const p = penghuni.find(x => x.id === id);
+    const payment = { id: 'pmt-' + Date.now(), penghuniId: id, nama: p ? p.nama : '', namaKosan: p ? p.namaKosan : '', amount: jumlah, date: new Date().toISOString() };
+    payments.push(payment);
+    const ok = await savePaymentToServer(payment);
+    savePaymentsToStorage();
+    renderPaymentsPage();
+    tutupModal('modalBayar');
+    setStatus($('statusBayar'), ok ? 'Pembayaran tersimpan di server.' : 'Pembayaran tersimpan di localStorage (server gagal).');
+  });
+}
+
+const btnBatalBayar = $('btnBatalBayar');
+if (btnBatalBayar) btnBatalBayar.addEventListener('click', () => { tutupModal('modalBayar'); });
 
 // Klik di luar modal menutupnya
 document.querySelectorAll('.modal-overlay').forEach(ov => {
@@ -929,7 +979,10 @@ document.addEventListener('click', event => {
   const fotoThumb = event.target.closest('.foto-thumb');
   if (fotoThumb) {
     const imageValue = fotoThumb.dataset.image || encodeURIComponent(FOTO_PLACEHOLDER);
-    const imageUrl = decodeURIComponent(imageValue);
+    console.debug('Thumbnail clicked - raw data-image attribute:', imageValue);
+    let imageUrl = '';
+    try { imageUrl = decodeURIComponent(imageValue); } catch (err) { imageUrl = imageValue; }
+    console.debug('Thumbnail clicked - decoded imageUrl:', imageUrl);
     bukaFotoIdentitas(imageUrl, fotoThumb.dataset.nama || 'Foto identitas');
     return;
   }
@@ -1073,6 +1126,11 @@ if (kartuTempo) kartuTempo.addEventListener('click', () => {
   location.href = 'data.html';
 });
 
+// Jika halaman mengandung elemen pembayaran, muat data pembayaran sekali saja.
+if ($('paymentsTable') || $('paymentsKosanSelect')) {
+  loadPaymentsFromStorage();
+}
+
 async function hapus(id) {
   if (!confirm('Hapus data penghuni ini?')) return;
   try {
@@ -1126,7 +1184,11 @@ if (formLogin) formLogin.addEventListener('submit', async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
   const statusLogin = $('statusLogin');
-  if (data.username === LOGIN_USER && data.password === LOGIN_PASS) {
+  console.log('Login attempt:', data);
+  setStatus(statusLogin, 'Memeriksa kredensial...');
+  const username = (data.username || '').toString().trim();
+  const password = (data.password || '').toString().trim();
+  if (username === LOGIN_USER && password === LOGIN_PASS) {
     sessionStorage.setItem(SESSION_KEY, '1');
     showDashboard();
     setStatus(statusLogin, '');
@@ -1134,9 +1196,26 @@ if (formLogin) formLogin.addEventListener('submit', async e => {
     try { await loadData(); }
     catch (error) { setStatus($('status'), 'Gagal memuat dashboard: ' + error.message, true); }
   } else {
+    console.warn('Login gagal - kredensial tidak cocok:', { username, password });
     setStatus(statusLogin, 'Username atau password salah.', true);
   }
 });
+
+// Jika URL berisi username & password (mis. untuk development), isi form dan submit otomatis
+if (formLogin) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const u = params.get('username');
+    const p = params.get('password');
+    if (u && p) {
+      // Isi form menggunakan properti elemen jika tersedia
+      if (formLogin.username) formLogin.username.value = u;
+      if (formLogin.password) formLogin.password.value = p;
+      // Gunakan requestSubmit bila tersedia untuk memicu validasi native
+      setTimeout(() => { if (typeof formLogin.requestSubmit === 'function') formLogin.requestSubmit(); else formLogin.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }, 100);
+    }
+  } catch (e) { console.warn('Auto-login parse error', e); }
+}
 
 const btnLogout = $('btnLogout');
 if (btnLogout) btnLogout.addEventListener('click', () => {

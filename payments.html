@@ -42,7 +42,7 @@
         <h2>Harga Kosan (per bulan)</h2>
         <div>
           <select id="paymentsKosanSelect"></select>
-          <input id="inputHargaKosan" type="number" placeholder="Masukkan harga (IDR)">
+          <input id="inputHargaKosan" type="text" inputmode="numeric" pattern="[0-9.]*" placeholder="Masukkan harga (IDR)">
           <button id="btnSetHarga" class="green">Set Harga</button>
         </div>
       </div>
@@ -73,6 +73,25 @@
       </div>
     </section>
   </main>
+  </div>
+
+  <div class="modal-overlay" id="modalBayar">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Pembayaran Penghuni</h2>
+        <button class="modal-close" data-close="modalBayar">✕</button>
+      </div>
+      <form id="formBayar" class="modal-form">
+        <input type="hidden" name="penghuniId" id="bayarPenghuniId">
+        <label>Nama Penghuni<input id="bayarNama" readonly></label>
+        <label>Jumlah (IDR)<input id="bayarJumlah" name="amount" type="text" inputmode="numeric" pattern="[0-9.]*" required></label>
+        <div class="actions">
+          <button type="submit" class="green">Bayar</button>
+          <button type="button" class="secondary" id="btnBatalBayar">Batal</button>
+        </div>
+      </form>
+      <div id="statusBayar"></div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
