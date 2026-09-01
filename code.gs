@@ -39,6 +39,14 @@ function doGet(e) {
       const map = {};
       rows.forEach(r => { if (r.namaKosan) map[r.namaKosan] = Number(r.harga || 0); });
       hasil = { success: true, data: map };
+    } else if (action === 'markexpired') {
+      // Mark penghuni whose tanggalSelesai is before today as Selesai
+      try {
+        const updated = markExpired_();
+        hasil = { success: true, data: { updated: updated } };
+      } catch (err) {
+        hasil = { success: false, message: String(err && err.message) };
+      }
     } else if (action === 'getimagedata') {
       // Return base64 data URI for a Drive file id (used to proxy images to avoid 403)
       const id = String((e && e.parameter && e.parameter.id) || '');
@@ -830,4 +838,53 @@ function simpanKosanPrice_(data) {
   } catch (err) {
     return { success: false, message: err.message };
   }
+}
+
+function markExpired_() {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  let updated = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const tanggalSelesai = row[6]; // index 6 -> Tanggal Selesai
+    const status = String(row[7] || '').trim();
+    if (!tanggalSelesai) continue;
+    let selesaiDate = null;
+    if (tanggalSelesai instanceof Date) selesaiDate = new Date(tanggalSelesai.getFullYear(), tanggalSelesai.getMonth(), tanggalSelesai.getDate());
+    else {
+      const parsed = new Date(String(tanggalSelesai));
+      if (!isNaN(parsed.getTime())) selesaiDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+    if (!selesaiDate) continue;
+    if (selesaiDate < today && status.toLowerCase() === 'aktif') {
+      // set to Selesai (column 8)
+      const rowIndex = i + 2;
+      sheet.getRange(rowIndex, 8).setValue('Selesai');
+      updated++;
+    }
+  }
+  return updated;
+}
+
+/**
+ * Buat trigger harian untuk menjalankan `markExpired_` otomatis.
+ * Jalankan fungsi ini sekali dari editor Apps Script untuk memasang trigger.
+ */
+function createDailyMarkExpiredTrigger() {
+  // Cek apakah trigger sudah ada
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'markExpired_') {
+      return { success: true, message: 'Trigger markExpired_ sudah terpasang.' };
+    }
+  }
+  // Pasang trigger harian pada jam 02:00 (server timezone)
+  ScriptApp.newTrigger('markExpired_').timeBased().atHour(2).everyDays(1).create();
+  return { success: true, message: 'Trigger harian untuk markExpired_ berhasil dibuat.' };
 }

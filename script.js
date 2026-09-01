@@ -571,6 +571,8 @@ function updateBatchActions(visibleList = []) {
 }
 
 async function loadData() {
+  // First, ask server to mark expired contracts as Selesai. Ignore failure.
+  try { await ambilDataJSONP('markexpired'); } catch (e) { /* ignore */ }
   const hasilPenghuni = await ambilDataJSONP('list');
   if (!hasilPenghuni || hasilPenghuni.success !== true || !Array.isArray(hasilPenghuni.data)) {
     throw new Error((hasilPenghuni && hasilPenghuni.message) || 'Data penghuni tidak dapat dibaca.');
