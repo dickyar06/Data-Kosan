@@ -658,9 +658,31 @@ function setFotoPreview(url, nama = '') {
   if (hidden) hidden.value = url || '';
   if (hapusFoto) hapusFoto.value = '0';
   if (preview) {
-    // Normalize URL for preview so Drive links and data URLs render correctly
-    preview.src = url ? normalizeImageUrl(url) : '';
-    preview.classList.toggle('aktif', Boolean(url));
+    // If url looks like a Drive link, request base64 via Apps Script proxy
+    const raw = String(url || '');
+    const driveIdMatch = raw.match(/(?:id=|file\/d\/)([a-zA-Z0-9_-]+)/);
+    if (driveIdMatch) {
+      const fileId = driveIdMatch[1];
+      ambilDataJSONP('getImageData&id=' + encodeURIComponent(fileId)).then(res => {
+        if (res && res.success && res.data) {
+          preview.src = res.data;
+          preview.classList.add('aktif');
+        } else {
+          const fallback = normalizeImageUrl(raw) || '';
+          preview.src = fallback;
+          preview.classList.toggle('aktif', Boolean(fallback));
+        }
+      }).catch(err => {
+        console.warn('setFotoPreview getImageData failed', err);
+        const fallback = normalizeImageUrl(raw) || '';
+        preview.src = fallback;
+        preview.classList.toggle('aktif', Boolean(fallback));
+      });
+    } else {
+      // Normal case: data URL or direct URL
+      preview.src = raw ? normalizeImageUrl(raw) : '';
+      preview.classList.toggle('aktif', Boolean(raw));
+    }
   }
   if (fotoInput && !url) fotoInput.value = '';
   if (nama && $('fotoZoomNama')) $('fotoZoomNama').textContent = nama;
@@ -671,7 +693,47 @@ function bukaFotoIdentitas(url, nama = '') {
   const downloadBtn = $('fotoDownloadBtn');
   if (!zoom) return;
 
+  // If the URL is a Drive link that may return 403, fetch base64 via Apps Script proxy
+  const normalized = String(url || '');
+  const driveIdMatch = normalized.match(/(?:id=|file\/d\/)([a-zA-Z0-9_-]+)/);
+  if (driveIdMatch) {
+    const fileId = driveIdMatch[1];
+    ambilDataJSONP('getImageData&id=' + encodeURIComponent(fileId)).then(res => {
+      if (res && res.success && res.data) {
+        zoom.src = res.data;
+        if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
+        if (downloadBtn) {
+          downloadBtn.href = '#';
+          downloadBtn.style.display = 'none';
+        }
+        bukaModal('modalFoto');
+      } else {
+        // fallback to normalized URL
+        const imageUrl = normalizeImageUrl(normalized || FOTO_PLACEHOLDER);
+        zoom.src = imageUrl;
+        if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
+        if (downloadBtn) {
+          downloadBtn.href = imageUrl === FOTO_PLACEHOLDER ? '#' : imageUrl;
+          downloadBtn.style.display = imageUrl === FOTO_PLACEHOLDER ? 'none' : 'inline-flex';
+        }
+        bukaModal('modalFoto');
+      }
+    }).catch(err => {
+      console.warn('getImageData failed', err);
+      const imageUrl = normalizeImageUrl(normalized || FOTO_PLACEHOLDER);
+      zoom.src = imageUrl;
+      if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
+      if (downloadBtn) {
+        downloadBtn.href = imageUrl === FOTO_PLACEHOLDER ? '#' : imageUrl;
+        downloadBtn.style.display = imageUrl === FOTO_PLACEHOLDER ? 'none' : 'inline-flex';
+      }
+      bukaModal('modalFoto');
+    });
+    return;
+  }
+
   const imageUrl = normalizeImageUrl(url || FOTO_PLACEHOLDER);
+  console.debug('bukaFotoIdentitas - normalized imageUrl:', imageUrl);
   zoom.src = imageUrl;
   if ($('fotoZoomNama')) $('fotoZoomNama').textContent = nama || 'Foto identitas';
 

@@ -39,6 +39,22 @@ function doGet(e) {
       const map = {};
       rows.forEach(r => { if (r.namaKosan) map[r.namaKosan] = Number(r.harga || 0); });
       hasil = { success: true, data: map };
+    } else if (action === 'getimagedata') {
+      // Return base64 data URI for a Drive file id (used to proxy images to avoid 403)
+      const id = String((e && e.parameter && e.parameter.id) || '');
+      if (!id) {
+        hasil = { success: false, message: 'id tidak diberikan' };
+      } else {
+        try {
+          const file = DriveApp.getFileById(id);
+          const blob = file.getBlob();
+          const b64 = Utilities.base64Encode(blob.getBytes());
+          const dataUri = 'data:' + blob.getContentType() + ';base64,' + b64;
+          hasil = { success: true, data: dataUri };
+        } catch (errGet) {
+          hasil = { success: false, message: String(errGet && errGet.message) };
+        }
+      }
     } else {
       hasil = {
         success: false,
